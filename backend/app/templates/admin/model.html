@@ -1,0 +1,114 @@
+{% extends "shared/base.html" %}
+{% block page_title %}ML Model Information{% endblock %}
+{% block page_sub %}Model comparison, metrics, and feature configuration{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+  <div class="text-muted" style="font-size:0.85rem;">
+    Retraining uses the current dataset file and the Pass Threshold set on the
+    <a href="{{ url_for('admin.settings') }}">Settings</a> page (currently <b>{{ settings.pass_threshold }}</b>).
+    Takes about a minute; the page reloads the new pipelines automatically — no server restart needed.
+  </div>
+  <form action="{{ url_for('admin.retrain_model') }}" method="POST" onsubmit="return confirm('Retrain now using the current dataset? This can take a minute.');">
+    <button type="submit" class="btn btn-brand text-nowrap"><i class="bi bi-arrow-repeat"></i> Retrain Model Now</button>
+  </form>
+</div>
+
+{% if not model_ready %}
+<div class="alert alert-warning">Pipelines not loaded. Click "Retrain Model Now" above, or run <code>python train_model.py</code> then restart the server.</div>
+{% else %}
+
+<div class="row g-3 mb-3">
+  <div class="col-md-6">
+    <div class="stat-card">
+      <div class="stat-label">Best Regression Model</div>
+      <div class="stat-value" style="font-size:1.3rem;">{{ metrics.best_regression_model }}</div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="stat-card">
+      <div class="stat-label">Best Classifier</div>
+      <div class="stat-value" style="font-size:1.3rem;">{{ metrics.best_classifier_model }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="card p-3 mb-3">
+  <div class="fw-semibold mb-2">Regression Model Comparison</div>
+  <div class="table-responsive">
+<table class="table table-clean table-sm">
+    <thead><tr><th>Model</th><th>Train R²</th><th>Test R²</th><th>Test RMSE</th><th>Test MAE</th><th>Overfit Gap</th></tr></thead>
+    <tbody>
+    {% for row in metrics.regression_results %}
+      <tr>
+        <td class="fw-semibold">{{ row['Model'] }}</td>
+        <td>{{ row['Train R2'] }}</td>
+        <td>{{ row['Test R2'] }}</td>
+        <td>{{ row['Test RMSE'] }}</td>
+        <td>{{ row['Test MAE'] }}</td>
+        <td>{{ row['Overfit Gap'] }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+</div>
+
+<div class="card p-3 mb-3">
+  <div class="fw-semibold mb-2">Classification Model Comparison</div>
+  <div class="table-responsive">
+<table class="table table-clean table-sm">
+    <thead><tr><th>Model</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1 Score</th><th>AUC</th></tr></thead>
+    <tbody>
+    {% for row in metrics.classification_results %}
+      <tr>
+        <td class="fw-semibold">{{ row['Model'] }}</td>
+        <td>{{ row['Accuracy'] }}</td>
+        <td>{{ row['Precision'] }}</td>
+        <td>{{ row['Recall'] }}</td>
+        <td>{{ row['F1 Score'] }}</td>
+        <td>{{ row['AUC'] }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card p-3">
+      <div class="fw-semibold mb-2">Feature Configuration</div>
+      <div class="mb-2"><span class="text-muted">Pass Threshold:</span> <b>{{ metrics.pass_threshold }}</b></div>
+      <div class="mb-2"><span class="text-muted">Training Rows (after cleaning):</span> <b>{{ metrics.rows_after_cleaning }}</b> / {{ metrics.rows_original }} original</div>
+      <div class="mb-2"><span class="text-muted">Features used:</span></div>
+      <ul class="mb-0">
+        {% for f in feature_names.feature_columns %}<li>{{ f }}</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card p-3">
+      <div class="fw-semibold mb-2">Feature Importance (Regression)</div>
+      <canvas id="importanceChart" height="180"></canvas>
+    </div>
+  </div>
+</div>
+
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+{% if model_ready %}
+<script>
+const imp = {{ metrics.feature_importance_regression|tojson }};
+const labels = Object.keys(imp);
+const values = Object.values(imp);
+new Chart(document.getElementById('importanceChart'), {
+  type: 'bar',
+  data: { labels: labels, datasets: [{ label: 'Importance', data: values, backgroundColor: '#4f46e5' }] },
+  options: { indexAxis: 'y', plugins: { legend: { display: false } } }
+});
+</script>
+{% endif %}
+{% endblock %}

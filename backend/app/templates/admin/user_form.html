@@ -1,0 +1,42 @@
+{% extends "shared/base.html" %}
+{% block page_title %}Add User{% endblock %}
+{% block page_sub %}Create an admin or student account{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card p-4">
+      <form method="POST">
+        <div class="mb-3">
+          <label class="form-label">Full Name</label>
+          <input type="text" name="full_name" class="form-control" required>
+        </div>
+        <div class="row">
+          <div class="col-12 col-sm-6 mb-3">
+            <label class="form-label">Username</label>
+            <input type="text" name="username" class="form-control" required>
+          </div>
+          <div class="col-12 col-sm-6 mb-3">
+            <label class="form-label">Email</label>
+            <input type="email" name="email" class="form-control" required>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-12 col-sm-6 mb-3">
+            <label class="form-label">Role</label>
+            <select name="role" class="form-select">
+              <option value="admin">Admin</option>
+              <option value="student">Student</option>
+            </select>
+          </div>
+          <div class="col-12 col-sm-6 mb-3">
+            <label class="form-label">Temporary Password</label>
+            <input type="text" name="password" class="form-control" placeholder="changeme123">
+          </div>
+        </div>
+        <button type="submit" class="btn btn-brand">Create Account</button>
+        <a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary">Cancel</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

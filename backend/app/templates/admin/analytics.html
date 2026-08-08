@@ -1,0 +1,66 @@
+{% extends "shared/base.html" %}
+{% block page_title %}Student Analytics{% endblock %}
+{% block page_sub %}Performance insights across all {{ total_students }} students{% endblock %}
+{% block content %}
+
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card p-3 h-100">
+      <div class="fw-semibold mb-2">Parental Support Breakdown</div>
+      <canvas id="supportChart" height="220"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card p-3 h-100">
+      <div class="fw-semibold mb-2">Pass vs Fail Predictions</div>
+      <canvas id="passFailChart" height="220"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card p-3 h-100">
+      <div class="fw-semibold mb-2">Attendance vs Grade</div>
+      <canvas id="scatterChart" height="220"></canvas>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+new Chart(document.getElementById('supportChart'), {
+  type: 'pie',
+  data: {
+    labels: {{ support_breakdown.keys()|list|tojson }},
+    datasets: [{ data: {{ support_breakdown.values()|list|tojson }}, backgroundColor: ['#ef4444','#f59e0b','#22c55e'] }]
+  },
+  options: { plugins: { legend: { position: 'bottom' } } }
+});
+
+new Chart(document.getElementById('passFailChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Pass', 'Fail'],
+    datasets: [{ data: [{{ pass_count }}, {{ fail_count }}], backgroundColor: ['#22c55e', '#ef4444'] }]
+  },
+  options: { plugins: { legend: { position: 'bottom' } } }
+});
+
+new Chart(document.getElementById('scatterChart'), {
+  type: 'scatter',
+  data: {
+    datasets: [{
+      label: 'Students',
+      data: {{ attendance_vs_grade|tojson }}.map(d => ({x: d.attendance, y: d.grade})),
+      backgroundColor: '#4f46e5'
+    }]
+  },
+  options: {
+    scales: {
+      x: { title: { display: true, text: 'Attendance %' } },
+      y: { title: { display: true, text: 'Grade' } }
+    },
+    plugins: { legend: { display: false } }
+  }
+});
+</script>
+{% endblock %}

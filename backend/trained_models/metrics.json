@@ -1,0 +1,129 @@
+{
+  "pass_threshold": 70.0,
+  "rows_original": 950,
+  "rows_after_cleaning": 950,
+  "best_regression_model": "Linear Regression",
+  "best_classifier_model": "XGBoost",
+  "regression_results": [
+    {
+      "Model": "Linear Regression",
+      "Train R2": 0.0091,
+      "Test R2": -0.0008,
+      "Test RMSE": 9.7125,
+      "Test MAE": 8.2807,
+      "Overfit Gap": 0.0099
+    },
+    {
+      "Model": "Lasso (a=0.1)",
+      "Train R2": 0.0074,
+      "Test R2": -0.0012,
+      "Test RMSE": 9.7143,
+      "Test MAE": 8.2711,
+      "Overfit Gap": 0.0086
+    },
+    {
+      "Model": "Ridge (a=1)",
+      "Train R2": 0.009,
+      "Test R2": -0.0014,
+      "Test RMSE": 9.7151,
+      "Test MAE": 8.282,
+      "Overfit Gap": 0.0104
+    },
+    {
+      "Model": "Random Forest",
+      "Train R2": 0.1035,
+      "Test R2": -0.0299,
+      "Test RMSE": 9.8524,
+      "Test MAE": 8.4263,
+      "Overfit Gap": 0.1334
+    },
+    {
+      "Model": "Gradient Boosting",
+      "Train R2": 0.3254,
+      "Test R2": -0.1557,
+      "Test RMSE": 10.4368,
+      "Test MAE": 8.9308,
+      "Overfit Gap": 0.481
+    },
+    {
+      "Model": "Decision Tree",
+      "Train R2": 0.0717,
+      "Test R2": -0.1603,
+      "Test RMSE": 10.4575,
+      "Test MAE": 8.8976,
+      "Overfit Gap": 0.2319
+    },
+    {
+      "Model": "XGBoost",
+      "Train R2": 0.3769,
+      "Test R2": -0.195,
+      "Test RMSE": 10.6131,
+      "Test MAE": 9.1188,
+      "Overfit Gap": 0.5719
+    }
+  ],
+  "classification_results": [
+    {
+      "Model": "XGBoost",
+      "Accuracy": 0.7684,
+      "Precision": 0.7944,
+      "Recall": 0.9533,
+      "F1 Score": 0.8667,
+      "AUC": 0.572
+    },
+    {
+      "Model": "Gradient Boosting",
+      "Accuracy": 0.7579,
+      "Precision": 0.7955,
+      "Recall": 0.9333,
+      "F1 Score": 0.8589,
+      "AUC": 0.5643
+    },
+    {
+      "Model": "Decision Tree",
+      "Accuracy": 0.7526,
+      "Precision": 0.8047,
+      "Recall": 0.9067,
+      "F1 Score": 0.8527,
+      "AUC": 0.5247
+    },
+    {
+      "Model": "Random Forest",
+      "Accuracy": 0.6947,
+      "Precision": 0.7911,
+      "Recall": 0.8333,
+      "F1 Score": 0.8117,
+      "AUC": 0.5518
+    },
+    {
+      "Model": "Logistic Regression",
+      "Accuracy": 0.4947,
+      "Precision": 0.77,
+      "Recall": 0.5133,
+      "F1 Score": 0.616,
+      "AUC": 0.4627
+    }
+  ],
+  "feature_importance_regression": {
+    "Attendance_Final": 0.9362818589918489,
+    "StudyHours_Final": 2.316760125067791,
+    "PreviousGrade": 0.12058578625983495,
+    "ExtracurricularActivities": 0.38073333144562527,
+    "Gender": 0.43212192233649943,
+    "ParentalSupport": 0.2904114828747141,
+    "Online_Classes": 0.12174163903546457,
+    "Attendance_Study_Interaction": 2.9035444954211864,
+    "Grade_Study_Ratio": 0.10776742043141437
+  },
+  "feature_importance_classification": {
+    "Attendance_Final": 0.1373768299818039,
+    "StudyHours_Final": 0.08755046129226685,
+    "PreviousGrade": 0.1260702908039093,
+    "ExtracurricularActivities": 0.19537125527858734,
+    "Gender": 0.06573145091533661,
+    "ParentalSupport": 0.19733059406280518,
+    "Online_Classes": 0.04957599565386772,
+    "Attendance_Study_Interaction": 0.06828076392412186,
+    "Grade_Study_Ratio": 0.07271227240562439
+  }
+}

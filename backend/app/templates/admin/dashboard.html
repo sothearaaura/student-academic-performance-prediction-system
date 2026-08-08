@@ -1,0 +1,198 @@
+{% extends "shared/base.html" %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_sub %}Overview of system performance and AI predictions{% endblock %}
+{% block content %}
+
+{% if not model_ready %}
+<div class="alert alert-warning">
+  <i class="bi bi-exclamation-triangle"></i>
+  ML pipelines are not loaded yet. Run <code>python train_model.py</code> in <code>backend/</code>, then restart the app.
+</div>
+{% endif %}
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon"><i class="bi bi-person-lines-fill"></i></div>
+      <div class="stat-value">{{ total_students }}</div>
+      <div class="stat-label">Total Students</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon info"><i class="bi bi-graph-up-arrow"></i></div>
+      <div class="stat-value">{{ total_predictions }}</div>
+      <div class="stat-label">Total Predictions</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon success"><i class="bi bi-bar-chart-line"></i></div>
+      <div class="stat-value">{{ avg_grade if avg_grade else '—' }}</div>
+      <div class="stat-label">Average Predicted Grade</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon danger"><i class="bi bi-exclamation-triangle"></i></div>
+      <div class="stat-value">{{ at_risk_count }}</div>
+      <div class="stat-label">Students At Risk</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-6">
+    <div class="card p-3 d-flex flex-row align-items-center justify-content-between">
+      <div>
+        <div class="text-muted" style="font-size:0.8rem;">Model Accuracy</div>
+        <div class="fw-bold fs-3">{{ model_accuracy if model_accuracy else '—' }}{{ '%' if model_accuracy }}</div>
+      </div>
+      <div class="stat-icon success" style="margin-bottom:0;"><i class="bi bi-shield-check"></i></div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card p-3 d-flex flex-row align-items-center justify-content-between">
+      <div>
+        <div class="text-muted" style="font-size:0.8rem;">Best Model</div>
+        <div class="fw-bold fs-5">{{ metrics.best_classifier_model or '—' }}</div>
+      </div>
+      <div class="stat-icon" style="margin-bottom:0;"><i class="bi bi-cpu"></i></div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-8">
+    <div class="card p-3 h-100">
+      <div class="fw-semibold mb-2">Prediction Trend <span class="text-muted fw-normal" style="font-size:0.78rem;">(Last 7 Days)</span></div>
+      <canvas id="trendChart" height="90"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card p-3 h-100">
+      <div class="fw-semibold mb-2">Performance Categories</div>
+      <canvas id="levelChart" height="200"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-4">
+    <div class="card p-3 h-100">
+      <div class="fw-semibold mb-2">Grade Distribution</div>
+      <canvas id="gradeChart" height="200"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card p-3 h-100">
+      <div class="fw-semibold mb-2">Attendance Distribution</div>
+      <canvas id="attendanceChart" height="200"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card p-3 h-100">
+      <div class="fw-semibold mb-2">Study Hours Distribution</div>
+      <canvas id="studyHoursChart" height="200"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card p-3 h-100">
+      <div class="fw-semibold mb-3">Recent Prediction Activity</div>
+      <div class="table-responsive">
+      <table class="table table-clean table-sm">
+        <thead><tr><th>Student</th><th>Predicted Grade</th><th>Result</th><th>When</th></tr></thead>
+        <tbody>
+        {% for p in recent_predictions %}
+          <tr>
+            <td>{{ p.student.full_name if p.student else 'Ad-hoc' }}</td>
+            <td>{{ "%.1f"|format(p.predicted_grade) }}</td>
+            <td><span class="badge {{ 'badge-pass' if p.pass_fail=='Pass' else 'badge-fail' }}">{{ p.pass_fail }}</span></td>
+            <td class="text-muted"><time class="local-time" data-utc="{{ p.created_at|isoutc }}" data-fmt="datetime">{{ p.created_at.strftime('%b %d, %H:%M') }} UTC</time></td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="text-center text-muted py-3">No predictions yet</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card p-3">
+      <div class="fw-semibold mb-2">Quick Actions</div>
+      <div class="d-grid gap-2">
+        <a href="{{ url_for('admin.predict') }}" class="btn btn-sm btn-brand"><i class="bi bi-magic"></i> Predict Grade</a>
+        <a href="{{ url_for('admin.create_student') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-person-plus"></i> Register Student</a>
+        <a href="{{ url_for('admin.students') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-person-lines-fill"></i> Manage Students</a>
+        <a href="{{ url_for('admin.analytics') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-bar-chart-line"></i> View Analytics</a>
+        <a href="{{ url_for('admin.reports') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark-pdf"></i> Generate Report</a>
+        <a href="{{ url_for('admin.model_info') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-repeat"></i> Update AI Model</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+Chart.defaults.font.family = "Inter";
+const palette = ['#6366f1', '#22c55e', '#38bdf8', '#f59e0b', '#ef4444', '#a855f7'];
+
+new Chart(document.getElementById('trendChart'), {
+  type: 'line',
+  data: {
+    labels: {{ trend_labels|tojson }},
+    datasets: [{
+      label: 'Predictions',
+      data: {{ trend_values|tojson }},
+      borderColor: '#6366f1',
+      backgroundColor: 'rgba(99,102,241,0.1)',
+      fill: true,
+      tension: 0.35
+    }]
+  },
+  options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+});
+
+new Chart(document.getElementById('levelChart'), {
+  type: 'doughnut',
+  data: {
+    labels: {{ grade_buckets.keys()|list|tojson }},
+    datasets: [{ data: {{ grade_buckets.values()|list|tojson }}, backgroundColor: palette }]
+  },
+  options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+});
+
+new Chart(document.getElementById('gradeChart'), {
+  type: 'doughnut',
+  data: {
+    labels: {{ letter_grades.keys()|list|tojson }},
+    datasets: [{ data: {{ letter_grades.values()|list|tojson }}, backgroundColor: palette }]
+  },
+  options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+});
+
+new Chart(document.getElementById('attendanceChart'), {
+  type: 'bar',
+  data: {
+    labels: {{ attendance_buckets.keys()|list|tojson }},
+    datasets: [{ data: {{ attendance_buckets.values()|list|tojson }}, backgroundColor: '#6366f1', borderRadius: 6 }]
+  },
+  options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+});
+
+new Chart(document.getElementById('studyHoursChart'), {
+  type: 'bar',
+  data: {
+    labels: {{ study_hours_buckets.keys()|list|tojson }},
+    datasets: [{ data: {{ study_hours_buckets.values()|list|tojson }}, backgroundColor: '#8b5cf6', borderRadius: 6 }]
+  },
+  options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+});
+</script>
+{% endblock %}

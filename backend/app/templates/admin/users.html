@@ -1,0 +1,65 @@
+{% extends "shared/base.html" %}
+{% block page_title %}Users{% endblock %}
+{% block page_sub %}Manage admin and student accounts{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div class="btn-group">
+    <a href="{{ url_for('admin.users') }}" class="btn btn-sm {{ 'btn-brand' if not role_filter else 'btn-outline-secondary' }}">All</a>
+    <a href="{{ url_for('admin.users', role='admin') }}" class="btn btn-sm {{ 'btn-brand' if role_filter=='admin' else 'btn-outline-secondary' }}">Admins</a>
+    <a href="{{ url_for('admin.users', role='student') }}" class="btn btn-sm {{ 'btn-brand' if role_filter=='student' else 'btn-outline-secondary' }}">Students</a>
+  </div>
+  <a href="{{ url_for('admin.create_user') }}" class="btn btn-brand btn-sm"><i class="bi bi-plus-lg"></i> Add User</a>
+</div>
+
+<div class="card p-3">
+  <div class="table-responsive">
+<table class="table table-clean align-middle">
+    <thead><tr><th>Name</th><th>Username</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th></th></tr></thead>
+    <tbody>
+    {% for u in users %}
+      <tr>
+        <td class="fw-semibold">{{ u.full_name }}</td>
+        <td>{{ u.username }}</td>
+        <td class="text-muted">{{ u.email }}</td>
+        <td><span class="badge badge-level">{{ u.role }}</span></td>
+        <td>
+          {% if u.is_active_flag %}<span class="badge badge-pass">Active</span>{% else %}<span class="badge badge-fail">Inactive</span>{% endif %}
+        </td>
+        <td class="text-muted"><time class="local-time" data-utc="{{ u.created_at|isoutc }}" data-fmt="date">{{ u.created_at.strftime('%b %d, %Y') }}</time></td>
+        <td class="text-end">
+          <div class="dropdown">
+            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown"><i class="bi bi-three-dots"></i></button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li>
+                <form action="{{ url_for('admin.reset_password', user_id=u.id) }}" method="POST" class="px-3 py-2">
+                  <label class="form-label small mb-1">Reset password</label>
+                  <div class="input-group input-group-sm">
+                    <input type="password" name="new_password" class="form-control" placeholder="New password" minlength="6" required>
+                    <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-check"></i></button>
+                  </div>
+                </form>
+              </li>
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <form action="{{ url_for('admin.toggle_active', user_id=u.id) }}" method="POST">
+                  <button class="dropdown-item" type="submit">{{ 'Deactivate' if u.is_active_flag else 'Activate' }}</button>
+                </form>
+              </li>
+              <li>
+                <form action="{{ url_for('admin.delete_user', user_id=u.id) }}" method="POST" onsubmit="return confirm('Delete this user permanently?');">
+                  <button class="dropdown-item text-danger" type="submit">Delete</button>
+                </form>
+              </li>
+            </ul>
+          </div>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7" class="text-center text-muted py-4">No users found</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+</div>
+{% endblock %}

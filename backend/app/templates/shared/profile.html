@@ -1,0 +1,35 @@
+{% extends "shared/base.html" %}
+{% block page_title %}My Profile{% endblock %}
+{% block page_sub %}Manage your account details{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card p-4">
+      <form method="POST">
+        <div class="mb-3">
+          <label class="form-label">Full Name</label>
+          <input type="text" name="full_name" class="form-control" value="{{ current_user.full_name }}" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Email</label>
+          <input type="email" name="email" class="form-control" value="{{ current_user.email }}" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Username</label>
+          <input type="text" class="form-control" value="{{ current_user.username }}" disabled>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Role</label>
+          <input type="text" class="form-control" value="{{ current_user.role|title }}" disabled>
+        </div>
+        <hr>
+        <div class="mb-3">
+          <label class="form-label">New Password <span class="text-muted">(leave blank to keep current)</span></label>
+          <input type="password" name="new_password" class="form-control" minlength="6">
+        </div>
+        <button type="submit" class="btn btn-brand">Save Changes</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

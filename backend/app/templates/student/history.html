@@ -1,0 +1,26 @@
+{% extends "shared/base.html" %}
+{% block page_title %}My Prediction History{% endblock %}
+{% block page_sub %}All predictions made for you over time{% endblock %}
+{% block content %}
+<div class="card p-3">
+  <div class="table-responsive">
+<table class="table table-clean align-middle">
+    <thead><tr><th>Predicted Grade</th><th>Result</th><th>Probability</th><th>Confidence</th><th>Level</th><th>Date</th></tr></thead>
+    <tbody>
+    {% for p in predictions %}
+      <tr>
+        <td>{{ "%.1f"|format(p.predicted_grade) }}</td>
+        <td><span class="badge {{ 'badge-pass' if p.pass_fail=='Pass' else 'badge-fail' }}">{{ p.pass_fail }}</span></td>
+        <td>{{ p.pass_probability }}%</td>
+        <td>{{ p.confidence }}%</td>
+        <td><span class="badge badge-level">{{ p.performance_level }}</span></td>
+        <td class="text-muted"><time class="local-time" data-utc="{{ p.created_at|isoutc }}" data-fmt="datetime">{{ p.created_at.strftime('%b %d, %Y %H:%M') }} UTC</time></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6" class="text-center text-muted py-4">No predictions yet</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+</div>
+{% endblock %}

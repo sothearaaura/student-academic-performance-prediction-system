@@ -1,0 +1,153 @@
+{% extends "shared/base.html" %}
+{% block page_title %}New Prediction{% endblock %}
+{% block page_sub %}Try different values and see an instant AI prediction{% endblock %}
+{% block content %}
+
+<div class="wizard-steps">
+  <div class="wizard-step {{ 'done' if result else 'active' }}">
+    <div class="step-circle">{{ '✓' if result else '1' }}</div>
+    <div class="step-label">Enter Information</div>
+  </div>
+  <div class="wizard-divider"></div>
+  <div class="wizard-step {{ 'active' if result else '' }}">
+    <div class="step-circle">2</div>
+    <div class="step-label">Result &amp; Recommendation</div>
+  </div>
+</div>
+
+{% if not result %}
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card p-4">
+      <form method="POST">
+        <div class="row">
+          <div class="col-12 col-sm-6 mb-3">
+            <label class="form-label fw-semibold"><i class="bi bi-person"></i> Gender</label>
+            <select name="gender" class="form-select">
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+          </div>
+          <div class="col-12 col-sm-6 mb-3">
+            <label class="form-label fw-semibold"><i class="bi bi-calendar-check"></i> Attendance Rate (%)</label>
+            <input type="number" step="0.1" min="0" max="100" name="attendance" class="form-control" placeholder="e.g. 92" value="{{ profile.attendance if profile else 85 }}" required>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-12 col-sm-6 mb-3">
+            <label class="form-label fw-semibold"><i class="bi bi-clock"></i> Study Hours Per Week</label>
+            <input type="number" step="0.1" min="0" name="study_hours" class="form-control" placeholder="e.g. 15" value="{{ profile.study_hours if profile else 15 }}" required>
+          </div>
+          <div class="col-12 col-sm-6 mb-3">
+            <label class="form-label fw-semibold"><i class="bi bi-journal-check"></i> Previous Grade</label>
+            <input type="number" step="0.1" min="0" max="100" name="previous_grade" class="form-control" placeholder="e.g. 78" value="{{ profile.previous_grade if profile else 75 }}" required>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-12 col-sm-6 mb-3">
+            <label class="form-label fw-semibold"><i class="bi bi-people"></i> Parental Support</label>
+            <select name="parental_support" class="form-select">
+              <option value="Low">Low</option>
+              <option value="Medium" selected>Medium</option>
+              <option value="High">High</option>
+            </select>
+          </div>
+          <div class="col-12 col-sm-6 mb-3">
+            <label class="form-label fw-semibold"><i class="bi bi-trophy"></i> Extracurricular Activities</label>
+            <input type="number" step="1" min="0" name="extracurricular" class="form-control" placeholder="e.g. 1" value="{{ profile.extracurricular if profile else 1 }}">
+          </div>
+        </div>
+        <div class="mb-3">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" name="online_classes" id="onlineClasses" {{ 'checked' if profile and profile.online_classes }}>
+            <label class="form-check-label fw-semibold" for="onlineClasses"><i class="bi bi-laptop"></i> Takes Online Classes</label>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-brand w-100 py-2"><i class="bi bi-magic"></i> Generate Prediction</button>
+      </form>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card p-4 h-100 d-flex align-items-center justify-content-center text-center text-muted">
+      <div>
+        <div style="font-size:2.5rem;">🎯</div>
+        Fill in the form and click <b>Generate Prediction</b> to see your result here.
+      </div>
+    </div>
+  </div>
+</div>
+
+{% else %}
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card p-4 h-100">
+      <div class="text-muted mb-1" style="font-size:0.85rem;">Predicted Final Grade</div>
+      <div class="fw-bold" style="font-size:2.6rem; color:var(--brand-dark); line-height:1;">{{ "%.1f"|format(result.predicted_grade) }}<span class="text-muted" style="font-size:1.1rem;"> /100</span></div>
+      <div class="text-muted mb-2 mt-2" style="font-size:0.85rem;">Performance Level</div>
+      <div>
+        <span class="badge {{ 'badge-excellent' if result.performance_level=='Excellent' else ('badge-good' if result.performance_level in ['Very Good','Good'] else ('badge-average' if result.performance_level=='Needs Improvement' else 'badge-atrisk')) }} fs-6 px-3 py-2">
+          <i class="bi bi-star-fill"></i> {{ result.performance_level }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card p-4 h-100 d-flex flex-row align-items-center gap-3">
+      <div class="progress-ring" style="background: conic-gradient(var(--success) {{ result.confidence }}%, var(--border) 0);">
+        <div class="progress-ring-inner">
+          <span class="pr-value">{{ result.confidence|round|int }}%</span>
+          <span class="pr-label">Score</span>
+        </div>
+      </div>
+      <div>
+        <div class="fw-semibold mb-1">Performance Summary</div>
+        <div class="text-muted" style="font-size:0.85rem;">
+          {% if result.pass_fail == 'Pass' %}
+            Great job! You're performing {{ result.performance_level|lower }}. Keep maintaining your study habits and stay consistent.
+          {% else %}
+            This result shows some risk of not passing. Focus on the suggestions below to turn it around.
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card p-4 h-100">
+      <div class="fw-semibold mb-3"><i class="bi bi-robot"></i> Personalized Recommendations</div>
+      {% set icons = [('bi-check-lg','success'), ('bi-calendar-check','info'), ('bi-clock-history','warning'), ('bi-mortarboard','danger')] %}
+      {% for r in result.recommendations %}
+        {% set icon = icons[loop.index0 % 4] %}
+        <div class="d-flex align-items-start gap-3 mb-3">
+          <div class="rec-icon {{ icon[1] }}" style="background: var(--{{ icon[1] }}-light); color: var(--{{ icon[1] }});"><i class="bi {{ icon[0] }}"></i></div>
+          <div style="font-size:0.88rem;">{{ r }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card p-4 h-100">
+      <div class="fw-semibold mb-3">Input Summary</div>
+      {% if raw %}
+      <div class="d-flex justify-content-between py-1 border-bottom"><span class="text-muted">Gender</span><b>{{ raw.gender }}</b></div>
+      <div class="d-flex justify-content-between py-1 border-bottom"><span class="text-muted">Attendance Rate</span><b>{{ raw.attendance }}%</b></div>
+      <div class="d-flex justify-content-between py-1 border-bottom"><span class="text-muted">Study Hours/Week</span><b>{{ raw.study_hours }}</b></div>
+      <div class="d-flex justify-content-between py-1 border-bottom"><span class="text-muted">Previous Grade</span><b>{{ raw.previous_grade }}</b></div>
+      <div class="d-flex justify-content-between py-1 border-bottom"><span class="text-muted">Parental Support</span><b>{{ raw.parental_support }}</b></div>
+      <div class="d-flex justify-content-between py-1 border-bottom"><span class="text-muted">Extracurricular Activities</span><b>{{ raw.extracurricular }}</b></div>
+      <div class="d-flex justify-content-between py-1"><span class="text-muted">Online Classes Taken</span><b>{{ 'Yes' if raw.online_classes else 'No' }}</b></div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="d-flex gap-2 justify-content-center">
+      <a href="{{ url_for('student.new_prediction') }}" class="btn btn-outline-secondary px-4"><i class="bi bi-arrow-repeat"></i> Predict Again</a>
+      <a href="{{ url_for('student.history') }}" class="btn btn-brand px-4">View History <i class="bi bi-arrow-right"></i></a>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

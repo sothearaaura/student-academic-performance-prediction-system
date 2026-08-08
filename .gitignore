@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+venv/
+.env
+database/app.db
+backend/exports/*.pdf
+.DS_Store
+*.egg-info/

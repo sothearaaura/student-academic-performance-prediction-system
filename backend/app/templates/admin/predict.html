@@ -1,0 +1,190 @@
+{% extends "shared/base.html" %}
+{% block page_title %}Predict Student Grade{% endblock %}
+{% block page_sub %}Run the trained ML pipeline on new or existing student data{% endblock %}
+{% block content %}
+
+<div class="wizard-steps">
+  <div class="wizard-step {{ 'done' if result else 'active' }}">
+    <div class="step-circle">{{ '✓' if result else '1' }}</div>
+    <div class="step-label">Enter Information</div>
+  </div>
+  <div class="wizard-divider"></div>
+  <div class="wizard-step {{ 'active' if result else '' }}">
+    <div class="step-circle">2</div>
+    <div class="step-label">Result &amp; Recommendation</div>
+  </div>
+</div>
+
+{% if not result %}
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card p-4">
+      <form method="POST" id="predictForm">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Link to Existing Student (optional)</label>
+          <select name="student_id" id="studentSelect" class="form-select">
+            <option value="">— Ad-hoc prediction (not saved to a student) —</option>
+            {% for s in students %}
+              <option value="{{ s.id }}"
+                data-attendance="{{ s.attendance }}" data-study="{{ s.study_hours }}"
+                data-grade="{{ s.previous_grade }}" data-extra="{{ s.extracurricular }}"
+                data-gender="{{ s.gender }}" data-support="{{ s.parental_support }}"
+                data-online="{{ 1 if s.online_classes else 0 }}"
+                {{ 'selected' if selected_student_id==s.id }}>
+                {{ s.student_code }} — {{ s.full_name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="row">
+          <div class="col-12 col-sm-6 mb-3">
+            <label class="form-label fw-semibold"><i class="bi bi-calendar-check"></i> Attendance (%)</label>
+            <input type="number" step="0.1" min="0" max="100" name="attendance" id="f_attendance" class="form-control" value="85" required>
+          </div>
+          <div class="col-12 col-sm-6 mb-3">
+            <label class="form-label fw-semibold"><i class="bi bi-clock"></i> Study Hours / Week</label>
+            <input type="number" step="0.1" min="0" name="study_hours" id="f_study" class="form-control" value="15" required>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-12 col-sm-6 mb-3">
+            <label class="form-label fw-semibold"><i class="bi bi-journal-check"></i> Previous Grade</label>
+            <input type="number" step="0.1" min="0" max="100" name="previous_grade" id="f_grade" class="form-control" value="75" required>
+          </div>
+          <div class="col-12 col-sm-6 mb-3">
+            <label class="form-label fw-semibold"><i class="bi bi-trophy"></i> Extracurricular Activities</label>
+            <input type="number" step="1" min="0" name="extracurricular" id="f_extra" class="form-control" value="1">
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-12 col-sm-6 mb-3">
+            <label class="form-label fw-semibold"><i class="bi bi-person"></i> Gender</label>
+            <select name="gender" id="f_gender" class="form-select">
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+          </div>
+          <div class="col-12 col-sm-6 mb-3">
+            <label class="form-label fw-semibold"><i class="bi bi-people"></i> Parental Support</label>
+            <select name="parental_support" id="f_support" class="form-select">
+              <option value="Low">Low</option>
+              <option value="Medium" selected>Medium</option>
+              <option value="High">High</option>
+            </select>
+          </div>
+        </div>
+        <div class="mb-3">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" name="online_classes" id="f_online">
+            <label class="form-check-label fw-semibold" for="f_online"><i class="bi bi-laptop"></i> Takes Online Classes</label>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-brand w-100 py-2"><i class="bi bi-magic"></i> Predict</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card p-4 h-100 d-flex align-items-center justify-content-center text-center text-muted">
+      <div>
+        <div style="font-size:2.5rem;">🎯</div>
+        Fill in the form and click <b>Predict</b> to see the result here.
+      </div>
+    </div>
+  </div>
+</div>
+
+{% else %}
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="card p-4 h-100">
+      <div class="text-muted mb-1" style="font-size:0.85rem;">Predicted Final Grade</div>
+      <div class="fw-bold" style="font-size:2.6rem; color:var(--brand-dark); line-height:1;">{{ "%.1f"|format(result.predicted_grade) }}<span class="text-muted" style="font-size:1.1rem;"> /100</span></div>
+      <div class="text-muted mb-2 mt-2" style="font-size:0.85rem;">Performance Level</div>
+      <div>
+        <span class="badge {{ 'badge-excellent' if result.performance_level=='Excellent' else ('badge-good' if result.performance_level in ['Very Good','Good'] else ('badge-average' if result.performance_level=='Needs Improvement' else 'badge-atrisk')) }} fs-6 px-3 py-2">
+          <i class="bi bi-star-fill"></i> {{ result.performance_level }}
+        </span>
+        <span class="badge {{ 'badge-pass' if result.pass_fail=='Pass' else 'badge-fail' }} fs-6 px-3 py-2 ms-1">{{ result.pass_fail }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card p-4 h-100 d-flex flex-row align-items-center gap-3">
+      <div class="progress-ring" style="background: conic-gradient(var(--success) {{ result.confidence }}%, var(--border) 0);">
+        <div class="progress-ring-inner">
+          <span class="pr-value">{{ result.confidence|round|int }}%</span>
+          <span class="pr-label">Score</span>
+        </div>
+      </div>
+      <div>
+        <div class="fw-semibold mb-1">Performance Summary</div>
+        <div class="text-muted" style="font-size:0.85rem;">
+          Pass probability {{ result.pass_probability }}% · Risk level: <b>{{ result.risk_level }}</b>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card p-4 h-100">
+      <div class="fw-semibold mb-3"><i class="bi bi-robot"></i> AI Recommendations</div>
+      {% set icons = [('bi-check-lg','success'), ('bi-calendar-check','info'), ('bi-clock-history','warning'), ('bi-mortarboard','danger')] %}
+      {% for r in result.recommendations %}
+        {% set icon = icons[loop.index0 % 4] %}
+        <div class="d-flex align-items-start gap-3 mb-3">
+          <div class="rec-icon" style="background: var(--{{ icon[1] }}-light); color: var(--{{ icon[1] }});"><i class="bi {{ icon[0] }}"></i></div>
+          <div style="font-size:0.88rem;">{{ r }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card p-4 h-100">
+      <div class="fw-semibold mb-3">Input Summary</div>
+      {% if raw %}
+      <div class="d-flex justify-content-between py-1 border-bottom"><span class="text-muted">Gender</span><b>{{ raw.gender }}</b></div>
+      <div class="d-flex justify-content-between py-1 border-bottom"><span class="text-muted">Attendance Rate</span><b>{{ raw.attendance }}%</b></div>
+      <div class="d-flex justify-content-between py-1 border-bottom"><span class="text-muted">Study Hours/Week</span><b>{{ raw.study_hours }}</b></div>
+      <div class="d-flex justify-content-between py-1 border-bottom"><span class="text-muted">Previous Grade</span><b>{{ raw.previous_grade }}</b></div>
+      <div class="d-flex justify-content-between py-1 border-bottom"><span class="text-muted">Parental Support</span><b>{{ raw.parental_support }}</b></div>
+      <div class="d-flex justify-content-between py-1 border-bottom"><span class="text-muted">Extracurricular Activities</span><b>{{ raw.extracurricular }}</b></div>
+      <div class="d-flex justify-content-between py-1"><span class="text-muted">Online Classes Taken</span><b>{{ 'Yes' if raw.online_classes else 'No' }}</b></div>
+      {% endif %}
+      <div class="text-muted mt-2" style="font-size:0.72rem;">
+        Regression model: {{ result.regression_model_name }} · Classifier: {{ result.classifier_model_name }}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="d-flex gap-2 justify-content-center">
+      <a href="{{ url_for('admin.predict') }}" class="btn btn-outline-secondary px-4"><i class="bi bi-arrow-repeat"></i> Predict Again</a>
+      <a href="{{ url_for('admin.predictions') }}" class="btn btn-brand px-4">View Prediction History <i class="bi bi-arrow-right"></i></a>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const studentSelect = document.getElementById('studentSelect');
+if (studentSelect) {
+  studentSelect.addEventListener('change', function () {
+    const opt = this.options[this.selectedIndex];
+    if (!opt.dataset.attendance) return;
+    document.getElementById('f_attendance').value = opt.dataset.attendance;
+    document.getElementById('f_study').value = opt.dataset.study;
+    document.getElementById('f_grade').value = opt.dataset.grade;
+    document.getElementById('f_extra').value = opt.dataset.extra;
+    document.getElementById('f_gender').value = opt.dataset.gender;
+    document.getElementById('f_support').value = opt.dataset.support;
+    document.getElementById('f_online').checked = opt.dataset.online === '1';
+  });
+}
+</script>
+{% endblock %}

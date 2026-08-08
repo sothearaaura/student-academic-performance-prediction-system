@@ -1,0 +1,47 @@
+{% extends "shared/base.html" %}
+{% block page_title %}Prediction History{% endblock %}
+{% block page_sub %}Every prediction made across the system (latest 200){% endblock %}
+{% block content %}
+
+<form class="d-flex gap-2 mb-3 flex-wrap" method="GET">
+  <input type="text" name="q" value="{{ q }}" class="form-control" style="max-width:280px;" placeholder="Search student name or code...">
+  <select name="level" class="form-select" style="max-width:200px;">
+    <option value="">All Performance</option>
+    {% for lvl in ['Excellent','Very Good','Good','Needs Improvement','At Risk'] %}
+      <option value="{{ lvl }}" {{ 'selected' if level_filter==lvl }}>{{ lvl }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn btn-outline-secondary"><i class="bi bi-search"></i></button>
+  {% if q or level_filter %}<a href="{{ url_for('admin.predictions') }}" class="btn btn-outline-secondary">Clear</a>{% endif %}
+</form>
+
+<div class="card p-3">
+  <div class="table-responsive">
+<table class="table table-clean align-middle">
+    <thead><tr><th>#</th><th>Student</th><th>Predicted Grade</th><th>Result</th><th>Probability</th><th>Confidence</th><th>Level</th><th>Made By</th><th>Date</th><th></th></tr></thead>
+    <tbody>
+    {% for p in predictions %}
+      <tr>
+        <td class="text-muted">{{ p.id }}</td>
+        <td class="fw-semibold">{{ p.student.full_name if p.student else 'Ad-hoc (no student linked)' }}</td>
+        <td>{{ "%.1f"|format(p.predicted_grade) }}</td>
+        <td><span class="badge {{ 'badge-pass' if p.pass_fail=='Pass' else 'badge-fail' }}">{{ p.pass_fail }}</span></td>
+        <td>{{ p.pass_probability }}%</td>
+        <td>{{ p.confidence }}%</td>
+        <td><span class="badge {{ 'badge-excellent' if p.performance_level=='Excellent' else ('badge-good' if p.performance_level in ['Very Good','Good'] else ('badge-average' if p.performance_level=='Needs Improvement' else 'badge-atrisk')) }}">{{ p.performance_level }}</span></td>
+        <td class="text-muted">{{ p.created_by.full_name if p.created_by else '—' }}</td>
+        <td class="text-muted"><time class="local-time" data-utc="{{ p.created_at|isoutc }}" data-fmt="datetime">{{ p.created_at.strftime('%b %d, %H:%M') }} UTC</time></td>
+        <td class="text-end">
+          <form action="{{ url_for('admin.delete_prediction', prediction_id=p.id) }}" method="POST" onsubmit="return confirm('Delete this prediction?');">
+            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+          </form>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="10" class="text-center text-muted py-4">No predictions found</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+</div>
+{% endblock %}

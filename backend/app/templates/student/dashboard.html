@@ -1,0 +1,158 @@
+{% extends "shared/base.html" %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_sub %}Here's your academic performance overview{% endblock %}
+{% block content %}
+
+{% if not profile %}
+<div class="alert alert-warning">Your account is not yet linked to a student record. Please contact your administrator.</div>
+{% else %}
+
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+  <div>
+    <div class="fw-bold" style="font-size:1.3rem;">Good {{ 'morning' if now_hour < 12 else ('afternoon' if now_hour < 18 else 'evening') }}, {{ profile.full_name.split(' ')[0] }}! 👋</div>
+    <div class="text-muted">Here's your academic performance overview.</div>
+  </div>
+  <a href="{{ url_for('student.new_prediction') }}" class="btn btn-brand"><i class="bi bi-plus-lg"></i> New Prediction</a>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon"><i class="bi bi-graph-up-arrow"></i></div>
+      <div class="stat-value">{{ total_predictions }}</div>
+      <div class="stat-label">Total Predictions</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon info"><i class="bi bi-bar-chart-line"></i></div>
+      <div class="stat-value">{{ avg_predicted_grade if avg_predicted_grade else '—' }}</div>
+      <div class="stat-label">Average Predicted Grade</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon success"><i class="bi bi-trophy"></i></div>
+      <div class="stat-value">{{ highest_predicted_grade if highest_predicted_grade else '—' }}</div>
+      <div class="stat-label">Highest Predicted Grade</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon warning"><i class="bi bi-clock-history"></i></div>
+      <div class="stat-value">{{ "%.1f"|format(prediction.predicted_grade) if prediction else '—' }}</div>
+      <div class="stat-label">Latest Prediction</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-8">
+    <div class="card p-3 h-100">
+      <div class="fw-semibold mb-2">Performance Trend</div>
+      <canvas id="trendChart" height="90"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card p-3 h-100">
+      <div class="fw-semibold mb-3">Latest Prediction</div>
+      {% if prediction %}
+        <span class="badge {{ 'badge-excellent' if prediction.performance_level=='Excellent' else ('badge-good' if prediction.performance_level in ['Very Good','Good'] else ('badge-average' if prediction.performance_level=='Needs Improvement' else 'badge-atrisk')) }} mb-2">
+          <i class="bi bi-stars"></i> {{ prediction.performance_level }}
+        </span>
+        <div class="fw-bold" style="font-size:2rem;">{{ "%.1f"|format(prediction.predicted_grade) }}<span class="text-muted" style="font-size:1rem;">/100</span></div>
+        <div class="text-muted mb-3" style="font-size:0.82rem;">Predicted on <time class="local-time" data-utc="{{ prediction.created_at|isoutc }}" data-fmt="date">{{ prediction.created_at.strftime('%b %d, %Y') }}</time></div>
+        <a href="{{ url_for('student.history') }}" class="btn btn-outline-secondary btn-sm w-100">View Details</a>
+      {% else %}
+        <div class="text-muted">No predictions yet.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="card p-4 mb-3">
+  <div class="row text-center">
+    <div class="col-6 col-md-3 mb-3 mb-md-0">
+      <div class="text-muted" style="font-size:0.78rem;">Confidence Score</div>
+      <div class="fw-bold fs-4">{{ prediction.confidence if prediction else '—' }}{{ '%' if prediction }}</div>
+    </div>
+    <div class="col-6 col-md-3 mb-3 mb-md-0">
+      <div class="text-muted" style="font-size:0.78rem;">Risk Level</div>
+      <div class="fw-bold fs-5 mt-1">
+        {% if prediction and prediction.risk_level %}
+          <span class="badge {{ 'badge-atrisk' if prediction.risk_level=='High Risk' else ('badge-average' if prediction.risk_level=='Medium Risk' else 'badge-excellent') }}">{{ prediction.risk_level }}</span>
+        {% else %} — {% endif %}
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="text-muted" style="font-size:0.78rem;">Result</div>
+      <div class="mt-1">
+        {% if prediction %}
+          <span class="badge {{ 'badge-pass' if prediction.pass_fail=='Pass' else 'badge-fail' }}">{{ prediction.pass_fail }}</span>
+        {% else %} — {% endif %}
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="text-muted" style="font-size:0.78rem;">Current Grade</div>
+      <div class="fw-bold fs-4">{{ profile.current_grade or profile.previous_grade }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card p-4">
+      <div class="fw-semibold mb-3">Personal Information</div>
+      <div class="d-flex justify-content-between py-1"><span class="text-muted">Student Code</span><b>{{ profile.student_code }}</b></div>
+      <div class="d-flex justify-content-between py-1"><span class="text-muted">Gender</span><b>{{ profile.gender }}</b></div>
+      <div class="d-flex justify-content-between py-1"><span class="text-muted">Attendance</span><b>{{ profile.attendance }}%</b></div>
+      <div class="d-flex justify-content-between py-1"><span class="text-muted">Study Hours / Week</span><b>{{ profile.study_hours }}</b></div>
+      <div class="d-flex justify-content-between py-1"><span class="text-muted">Parental Support</span><b>{{ profile.parental_support }}</b></div>
+      <div class="d-flex justify-content-between py-1"><span class="text-muted">Online Classes</span><b>{{ 'Yes' if profile.online_classes else 'No' }}</b></div>
+      <hr>
+      <a href="{{ url_for('student.download_report') }}" class="btn btn-brand btn-sm"><i class="bi bi-file-earmark-pdf"></i> Download My Report</a>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card p-4 h-100">
+      <div class="fw-semibold mb-2">Weak Areas</div>
+      <ul class="mb-0">
+        {% for w in weak_areas %}<li>{{ w }}</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card p-4 h-100">
+      <div class="fw-semibold mb-2">Suggestions for Improvement</div>
+      <ul class="mb-0">
+        {% for r in recommendations %}<li class="mb-1">{{ r }}</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+{% if profile %}
+<script>
+const history = {{ history_data|tojson }};
+new Chart(document.getElementById('trendChart'), {
+  type: 'line',
+  data: {
+    labels: history.map(h => new Date(h.created_at).toLocaleString(undefined, {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})).reverse(),
+    datasets: [{
+      label: 'Predicted Grade',
+      data: history.map(h => h.predicted_grade).reverse(),
+      borderColor: '#6366f1',
+      backgroundColor: 'rgba(99,102,241,0.1)',
+      fill: true,
+      tension: 0.35,
+      pointBackgroundColor: '#6366f1'
+    }]
+  },
+  options: { plugins: { legend: { display: false } } }
+});
+</script>
+{% endif %}
+{% endblock %}

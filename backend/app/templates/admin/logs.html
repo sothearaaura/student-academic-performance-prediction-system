@@ -1,0 +1,55 @@
+{% extends "shared/base.html" %}
+{% block page_title %}System Logs{% endblock %}
+{% block page_sub %}Activity and login history{% endblock %}
+{% block content %}
+
+<ul class="nav nav-tabs mb-3" role="tablist">
+  <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#activity">Activity Log</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#logins">Login History</button></li>
+</ul>
+
+<div class="tab-content">
+  <div class="tab-pane fade show active" id="activity">
+    <div class="card p-3">
+      <div class="table-responsive">
+<table class="table table-clean align-middle">
+        <thead><tr><th>User</th><th>Action</th><th>Details</th><th>When</th></tr></thead>
+        <tbody>
+        {% for log in activity %}
+          <tr>
+            <td>{{ log.user.full_name if log.user else 'Unknown' }}</td>
+            <td><span class="badge badge-level">{{ log.action }}</span></td>
+            <td class="text-muted">{{ log.details }}</td>
+            <td class="text-muted"><time class="local-time" data-utc="{{ log.timestamp|isoutc }}" data-fmt="datetime-sec">{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }} UTC</time></td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="text-center text-muted py-4">No activity yet</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+</div>
+    </div>
+  </div>
+  <div class="tab-pane fade" id="logins">
+    <div class="card p-3">
+      <div class="table-responsive">
+<table class="table table-clean align-middle">
+        <thead><tr><th>Username Attempted</th><th>IP Address</th><th>Result</th><th>When</th></tr></thead>
+        <tbody>
+        {% for l in logins %}
+          <tr>
+            <td>{{ l.username_attempted }}</td>
+            <td class="text-muted">{{ l.ip_address }}</td>
+            <td>{% if l.success %}<span class="badge badge-pass">Success</span>{% else %}<span class="badge badge-fail">Failed</span>{% endif %}</td>
+            <td class="text-muted"><time class="local-time" data-utc="{{ l.timestamp|isoutc }}" data-fmt="datetime-sec">{{ l.timestamp.strftime('%Y-%m-%d %H:%M:%S') }} UTC</time></td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="text-center text-muted py-4">No login attempts recorded yet</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+</div>
+    </div>
+  </div>
+</div>
+{% endblock %}

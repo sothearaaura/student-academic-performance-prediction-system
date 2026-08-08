@@ -1,0 +1,24 @@
+{
+  "feature_columns": [
+    "Attendance_Final",
+    "StudyHours_Final",
+    "PreviousGrade",
+    "ExtracurricularActivities",
+    "Gender",
+    "ParentalSupport",
+    "Online_Classes",
+    "Attendance_Study_Interaction",
+    "Grade_Study_Ratio"
+  ],
+  "gender_map": {
+    "Male": 0,
+    "Female": 1
+  },
+  "support_map": {
+    "Low": 0,
+    "Medium": 1,
+    "High": 2
+  },
+  "gender_mode": "Male",
+  "support_mode": "High"
+}

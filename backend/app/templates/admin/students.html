@@ -1,0 +1,50 @@
+{% extends "shared/base.html" %}
+{% block page_title %}All Students{% endblock %}
+{% block page_sub %}Register, edit, and manage every student in the system{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between mb-3 flex-wrap gap-2">
+  <form class="d-flex gap-2" method="GET">
+    <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Search name or code...">
+    <select name="support" class="form-select">
+      <option value="">All Support Levels</option>
+      <option value="Low" {{ 'selected' if support_filter=='Low' }}>Low</option>
+      <option value="Medium" {{ 'selected' if support_filter=='Medium' }}>Medium</option>
+      <option value="High" {{ 'selected' if support_filter=='High' }}>High</option>
+    </select>
+    <button class="btn btn-outline-secondary"><i class="bi bi-search"></i></button>
+  </form>
+  <a href="{{ url_for('admin.create_student') }}" class="btn btn-brand"><i class="bi bi-plus-lg"></i> Register Student</a>
+</div>
+
+<div class="card p-3">
+  <div class="table-responsive">
+<table class="table table-clean align-middle">
+    <thead><tr><th>Code</th><th>Name</th><th>Attendance</th><th>Study Hrs</th><th>Prev Grade</th><th>Support</th><th>Current Grade</th><th></th></tr></thead>
+    <tbody>
+    {% for s in students %}
+      <tr>
+        <td>{{ s.student_code }}</td>
+        <td class="fw-semibold"><a href="{{ url_for('admin.student_detail', student_id=s.id) }}">{{ s.full_name }}</a></td>
+        <td>{{ s.attendance }}%</td>
+        <td>{{ s.study_hours }}</td>
+        <td>{{ s.previous_grade }}</td>
+        <td><span class="badge badge-level">{{ s.parental_support }}</span></td>
+        <td>{{ s.current_grade or '—' }}</td>
+        <td class="text-end">
+          <a href="{{ url_for('admin.predict', student_id=s.id) }}" class="btn btn-sm btn-outline-primary" title="Predict"><i class="bi bi-magic"></i></a>
+          <a href="{{ url_for('admin.edit_student', student_id=s.id) }}" class="btn btn-sm btn-outline-secondary" title="Edit"><i class="bi bi-pencil"></i></a>
+          <a href="{{ url_for('admin.student_report', student_id=s.id) }}" class="btn btn-sm btn-outline-secondary" title="PDF Report"><i class="bi bi-file-earmark-pdf"></i></a>
+          <form action="{{ url_for('admin.delete_student', student_id=s.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this student and all related predictions?');">
+            <button class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
+          </form>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="8" class="text-center text-muted py-4">No students found. Register your first student to get started.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+</div>
+{% endblock %}

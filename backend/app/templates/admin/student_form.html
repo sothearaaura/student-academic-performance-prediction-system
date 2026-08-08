@@ -1,0 +1,91 @@
+{% extends "shared/base.html" %}
+{% block page_title %}{{ 'Edit Student' if student else 'Register Student' }}{% endblock %}
+{% block page_sub %}Enter the student's academic profile{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card p-4">
+      <form method="POST">
+        <div class="mb-3">
+          <label class="form-label">Full Name</label>
+          <input type="text" name="full_name" class="form-control" value="{{ student.full_name if student else '' }}" required>
+        </div>
+        <div class="row">
+          <div class="col-12 col-sm-6 mb-3">
+            <label class="form-label">Gender</label>
+            <select name="gender" class="form-select">
+              <option value="Male" {{ 'selected' if student and student.gender=='Male' }}>Male</option>
+              <option value="Female" {{ 'selected' if student and student.gender=='Female' }}>Female</option>
+            </select>
+          </div>
+          <div class="col-12 col-sm-6 mb-3">
+            <label class="form-label">Email (optional)</label>
+            <input type="email" name="email" class="form-control" value="{{ student.email if student and student.email else '' }}">
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-12 col-sm-6 col-md-4 mb-3">
+            <label class="form-label">Attendance (%)</label>
+            <input type="number" step="0.1" min="0" max="100" name="attendance" class="form-control" value="{{ student.attendance if student else 85 }}" required>
+          </div>
+          <div class="col-12 col-sm-6 col-md-4 mb-3">
+            <label class="form-label">Study Hours / Week</label>
+            <input type="number" step="0.1" min="0" name="study_hours" class="form-control" value="{{ student.study_hours if student else 15 }}" required>
+          </div>
+          <div class="col-12 col-sm-6 col-md-4 mb-3">
+            <label class="form-label">Previous Grade</label>
+            <input type="number" step="0.1" min="0" max="100" name="previous_grade" class="form-control" value="{{ student.previous_grade if student else 75 }}" required>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-12 col-sm-6 col-md-4 mb-3">
+            <label class="form-label">Extracurricular Activities</label>
+            <input type="number" step="1" min="0" name="extracurricular" class="form-control" value="{{ student.extracurricular if student else 1 }}">
+          </div>
+          <div class="col-12 col-sm-6 col-md-4 mb-3">
+            <label class="form-label">Parental Support</label>
+            <select name="parental_support" class="form-select">
+              <option value="Low" {{ 'selected' if student and student.parental_support=='Low' }}>Low</option>
+              <option value="Medium" {{ 'selected' if not student or student.parental_support=='Medium' }}>Medium</option>
+              <option value="High" {{ 'selected' if student and student.parental_support=='High' }}>High</option>
+            </select>
+          </div>
+          <div class="col-12 col-sm-6 col-md-4 mb-3 d-flex align-items-end">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="online_classes" id="onlineClasses" {{ 'checked' if student and student.online_classes }}>
+              <label class="form-check-label" for="onlineClasses">Takes Online Classes</label>
+            </div>
+          </div>
+        </div>
+
+        <hr>
+        {% if student and student.user_id %}
+          <div class="alert alert-info py-2 mb-3">
+            <i class="bi bi-person-check"></i> This student already has a login account
+            (<b>{{ student.account.username }}</b>). You can reset their password from
+            the <a href="{{ url_for('admin.users') }}">Users</a> page.
+          </div>
+        {% else %}
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" name="create_login" id="createLogin" onchange="document.getElementById('loginFields').classList.toggle('d-none', !this.checked)">
+            <label class="form-check-label" for="createLogin">Create a login account for this student</label>
+          </div>
+          <div id="loginFields" class="row d-none mb-3">
+            <div class="col-12 col-sm-6">
+              <label class="form-label">Username</label>
+              <input type="text" name="login_username" class="form-control">
+            </div>
+            <div class="col-12 col-sm-6">
+              <label class="form-label">Password</label>
+              <input type="password" name="login_password" class="form-control" minlength="6">
+            </div>
+          </div>
+        {% endif %}
+
+        <button type="submit" class="btn btn-brand">{{ 'Save Changes' if student else 'Register Student' }}</button>
+        <a href="{{ url_for('admin.students') }}" class="btn btn-outline-secondary">Cancel</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
