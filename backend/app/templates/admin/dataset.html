@@ -25,6 +25,22 @@
 
   <div class="col-lg-6">
     <div class="card p-4 h-100">
+      <div class="fw-semibold mb-3">Import as Demo Students</div>
+      <div class="text-muted mb-3" style="font-size:0.85rem;">
+        This dataset is <b>not</b> automatically turned into student records — that only
+        happens when you click this button. It's safe to click any time: rows that already
+        exist (matching student code) are skipped, so it never creates duplicates.
+      </div>
+      <form action="{{ url_for('admin.import_demo_students') }}" method="POST">
+        <button type="submit" class="btn btn-outline-secondary"><i class="bi bi-people"></i> Import Dataset as Demo Students</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mt-1">
+  <div class="col-lg-6">
+    <div class="card p-4 h-100">
       <div class="fw-semibold mb-3">Replace Dataset</div>
       <form action="{{ url_for('admin.upload_dataset') }}" method="POST" enctype="multipart/form-data">
         <div class="mb-3">

@@ -253,7 +253,16 @@ def students():
     if support_filter in ("Low", "Medium", "High"):
         query = query.filter_by(parental_support=support_filter)
     all_students = query.order_by(Student.created_at.desc()).all()
-    return render_template("admin/students.html", students=all_students, q=q, support_filter=support_filter)
+
+    imported_count = Student.query.filter(
+        Student.student_code.like("STU%"),
+        Student.user_id.is_(None),
+    ).count()
+
+    return render_template(
+        "admin/students.html", students=all_students, q=q, support_filter=support_filter,
+        imported_count=imported_count,
+    )
 
 
 @admin_bp.route("/students/create", methods=["GET", "POST"])
@@ -340,6 +349,26 @@ def delete_student(student_id):
     db.session.commit()
     ActivityLog.log(current_user.id, "delete_student", f"Deleted student: {name}")
     flash(f"Student '{name}' deleted.", "info")
+    return redirect(url_for("admin.students"))
+
+
+@admin_bp.route("/students/clear-imported", methods=["POST"])
+def clear_imported_students():
+    """Bulk-deletes the demo students that seed.py auto-imports from the
+    dataset (student codes STU00001-STU00950 with no real linked login).
+    Any of those that a real student has since claimed via signup (i.e.
+    has a linked user account) are deliberately left alone, so this can't
+    accidentally delete someone's real, in-use account."""
+    imported = Student.query.filter(
+        Student.student_code.like("STU%"),
+        Student.user_id.is_(None),
+    ).all()
+    count = len(imported)
+    for s in imported:
+        db.session.delete(s)
+    db.session.commit()
+    ActivityLog.log(current_user.id, "clear_imported_students", f"Deleted {count} unclaimed imported students")
+    flash(f"Deleted {count} imported dataset student(s). Any linked to a real login were kept.", "success")
     return redirect(url_for("admin.students"))
 
 
@@ -635,6 +664,23 @@ def upload_dataset():
         "success",
     )
     return redirect(url_for("admin.dataset"))
+
+
+@admin_bp.route("/dataset/import-demo-students", methods=["POST"])
+def import_demo_students():
+    """Manually, deliberately imports the current dataset file as Student
+    records. This is the ONLY way the bulk dataset ever becomes students --
+    it never happens automatically, so it never fights an admin's decision
+    to clear that data out."""
+    from seed import import_dataset
+
+    count = import_dataset(current_user)
+    ActivityLog.log(current_user.id, "import_demo_students", f"Imported {count} students from dataset")
+    if count:
+        flash(f"Imported {count} student(s) from the dataset.", "success")
+    else:
+        flash("No new students imported (dataset already fully imported, or file not found).", "info")
+    return redirect(url_for("admin.students"))
 
 
 # ------------------------------------------------------------ ML Model ----

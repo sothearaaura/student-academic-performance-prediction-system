@@ -50,7 +50,14 @@
   <div class="col-lg-8">
     <div class="card p-3 h-100">
       <div class="fw-semibold mb-2">Performance Trend</div>
+      {% if history %}
       <canvas id="trendChart" height="90"></canvas>
+      {% else %}
+      <div class="text-muted text-center py-5" style="font-size:0.88rem;">
+        <div style="font-size:2rem;">📈</div>
+        Your performance trend will appear here once you make your first prediction.
+      </div>
+      {% endif %}
     </div>
   </div>
   <div class="col-lg-4">
@@ -116,17 +123,28 @@
   <div class="col-lg-4">
     <div class="card p-4 h-100">
       <div class="fw-semibold mb-2">Weak Areas</div>
+      {% if prediction %}
       <ul class="mb-0">
         {% for w in weak_areas %}<li>{{ w }}</li>{% endfor %}
       </ul>
+      {% else %}
+      <div class="text-muted" style="font-size:0.85rem;">Make your first prediction to see this.</div>
+      {% endif %}
     </div>
   </div>
   <div class="col-lg-4">
     <div class="card p-4 h-100">
       <div class="fw-semibold mb-2">Suggestions for Improvement</div>
+      {% if prediction %}
       <ul class="mb-0">
         {% for r in recommendations %}<li class="mb-1">{{ r }}</li>{% endfor %}
       </ul>
+      {% else %}
+      <div class="text-muted" style="font-size:0.85rem;">
+        You haven't made a prediction yet. Click <b>New Prediction</b> above to get your first
+        AI-powered grade prediction and personalized study recommendations.
+      </div>
+      {% endif %}
     </div>
   </div>
 </div>
@@ -134,7 +152,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
-{% if profile %}
+{% if profile and history %}
 <script>
 const history = {{ history_data|tojson }};
 new Chart(document.getElementById('trendChart'), {

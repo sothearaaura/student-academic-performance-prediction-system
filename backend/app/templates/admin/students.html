@@ -17,6 +17,20 @@
   <a href="{{ url_for('admin.create_student') }}" class="btn btn-brand"><i class="bi bi-plus-lg"></i> Register Student</a>
 </div>
 
+{% if imported_count > 0 %}
+<div class="alert alert-warning d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <div>
+    <i class="bi bi-database-exclamation"></i>
+    <b>{{ imported_count }}</b> student(s) still here are auto-imported demo data from the dataset
+    (not real registered users).
+  </div>
+  <form action="{{ url_for('admin.clear_imported_students') }}" method="POST"
+        onsubmit="return confirm('Delete all {{ imported_count }} imported dataset students? Any that a real student has linked to their account via signup will be kept. This cannot be undone.');">
+    <button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i> Clear Imported Students</button>
+  </form>
+</div>
+{% endif %}
+
 <div class="card p-3">
   <div class="table-responsive">
 <table class="table table-clean align-middle">

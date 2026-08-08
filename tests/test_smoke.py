@@ -112,42 +112,60 @@ def test_student_can_download_report(client):
     assert resp.content_type == "application/pdf"
 
 
-def test_student_dashboard_generates_realtime_prediction(client):
-    """Matches the flow: Student -> Browse Predicted Grade -> System retrieves
-    records -> runs Prediction Model -> generates and displays the grade,
-    confidence, and risk level -- with zero admin action required first."""
-    from app.models import Prediction
+def test_student_dashboard_shows_empty_state_until_real_prediction_made(client):
+    """Regression test: the dashboard must NOT silently fabricate a prediction
+    for a student who hasn't actually made one. A brand-new student should
+    see an empty state; only after they submit New Prediction (or an admin
+    predicts for them) should the dashboard show real numbers."""
+    from app.extensions import db
+    from app.models import Prediction, Student, User, ROLE_STUDENT
 
     with client.application.app_context():
+        # Create a brand-new student + login with zero prediction history
+        u = User(full_name="Fresh Student", username="freshdashtest", email="freshdashtest@example.com", role=ROLE_STUDENT)
+        u.set_password("Pass123")
+        db.session.add(u)
+        db.session.flush()
+        s = Student(student_code="STUFRESH1", full_name="Fresh Student", user_id=u.id)
+        db.session.add(s)
+        db.session.commit()
         baseline_count = Prediction.query.count()
 
-    login(client, "student1", "Student@123")
+    login(client, "freshdashtest", "Pass123")
     resp = client.get("/student/dashboard")
     assert resp.status_code == 200
-    assert b"Risk Level" in resp.data
-    assert b"Confidence Score" in resp.data
-    assert b"Suggestions for Improvement" in resp.data
-    # No em-dash placeholder -- a real prediction was generated, not a "nothing yet" state
-    assert 'stat-value">\u2014' not in resp.data.decode()
+    text = resp.data.decode()
+    assert "No predictions yet." in text
+    assert "haven't made a prediction yet" in text
+    # Stat cards should show the em-dash placeholder, not a fabricated number
+    assert 'stat-value">\u2014' in text
 
     with client.application.app_context():
-        after_first_visit = Prediction.query.count()
-    assert after_first_visit in (baseline_count, baseline_count + 1), (
-        "first visit should store at most one new prediction "
-        "(zero if student1 already had one from a prior test)"
+        after_visit_count = Prediction.query.count()
+    assert after_visit_count == baseline_count, "visiting the dashboard must never create a prediction on its own"
+
+    # Now the student actually makes a prediction -- dashboard should reflect it
+    client.post(
+        "/student/new-prediction",
+        data={"attendance": "85", "study_hours": "15", "previous_grade": "75", "extracurricular": "1", "gender": "Male", "parental_support": "Medium"},
     )
-
-    # Repeat visits with unchanged data should not spam duplicate history entries
-    client.get("/student/dashboard")
-    client.get("/student/dashboard")
-    with client.application.app_context():
-        after_repeat_visits = Prediction.query.count()
-    assert after_repeat_visits == after_first_visit, "unchanged data should not create duplicate predictions"
+    resp = client.get("/student/dashboard")
+    text = resp.data.decode()
+    assert "No predictions yet." not in text
+    assert "Risk Level" in text
 
 
 def test_signup_claims_existing_student_record(client):
     """New user role feature: sign up for new user, login for old user.
     Claiming an existing admin-entered academic record via Student Code."""
+    from app.extensions import db
+    from app.models import Student
+
+    with client.application.app_context():
+        unclaimed = Student(student_code="STUCLAIMTEST", full_name="Unclaimed Record")
+        db.session.add(unclaimed)
+        db.session.commit()
+
     resp = client.post(
         "/signup",
         data={
@@ -156,7 +174,7 @@ def test_signup_claims_existing_student_record(client):
             "email": "claimanttest@example.com",
             "password": "Pass123",
             "confirm_password": "Pass123",
-            "student_code": "STU00003",
+            "student_code": "STUCLAIMTEST",
         },
         follow_redirects=True,
     )
@@ -213,7 +231,10 @@ def test_timestamps_are_utc_marked_for_client_side_localization(client):
     timestamp must carry a data-utc="...Z" attribute so app.js can convert
     it client-side to whatever timezone the actual visitor is in."""
     login(client, "student1", "Student@123")
-    client.get("/student/dashboard")  # ensures at least one prediction exists
+    client.post(
+        "/student/new-prediction",
+        data={"attendance": "85", "study_hours": "15", "previous_grade": "75", "extracurricular": "1", "gender": "Male", "parental_support": "Medium"},
+    )  # ensures at least one prediction exists
     resp = client.get("/student/history")
     text = resp.data.decode()
     assert 'class="local-time"' in text
@@ -225,6 +246,109 @@ def test_timestamps_are_utc_marked_for_client_side_localization(client):
     m = re.search(r'data-utc="([^"]+)"', text)
     assert m is not None
     datetime.fromisoformat(m.group(1).replace("Z", "+00:00"))  # raises if invalid
+
+
+def test_admin_can_clear_imported_students_but_keeps_linked_ones(client):
+    """Regression test: the bulk-clear action must delete unclaimed dataset
+    imports but must NEVER delete a student record that's linked to a real
+    login (e.g. student1, or anyone who signed up with a Student Code)."""
+    from app.models import Student
+
+    login(client, "admin", "Admin@123")
+
+    with client.application.app_context():
+        before_total = Student.query.count()
+        before_unlinked_stu = Student.query.filter(
+            Student.student_code.like("STU%"), Student.user_id.is_(None)
+        ).count()
+        # student1's linked record must survive
+        linked_code = Student.query.filter_by(student_code="STU00001").first().student_code
+        assert linked_code == "STU00001"
+
+    resp = client.post("/admin/students/clear-imported", follow_redirects=True)
+    assert resp.status_code == 200
+    assert b"Deleted" in resp.data
+
+    with client.application.app_context():
+        after_total = Student.query.count()
+        still_unlinked_stu = Student.query.filter(
+            Student.student_code.like("STU%"), Student.user_id.is_(None)
+        ).count()
+        # The linked demo student must still exist
+        still_linked = Student.query.filter_by(student_code="STU00001").first()
+        assert still_linked is not None
+        assert still_linked.user_id is not None
+
+    assert still_unlinked_stu == 0, "all unclaimed imported students should be gone"
+    assert after_total == before_total - before_unlinked_stu, "only the unclaimed imported students should have been removed"
+
+
+def test_new_prediction_syncs_student_profile_for_admin_visibility(client):
+    """Regression test for a reported bug: a student's prediction inputs were
+    stored on the Prediction record but never synced back to their actual
+    Student profile, so admin's Manage Students page kept showing stale/blank
+    data even after the student had clearly reported real numbers."""
+    from app.models import Student
+
+    resp = client.post(
+        "/signup",
+        data={
+            "full_name": "Profile Sync Test",
+            "username": "profilesynctest",
+            "email": "profilesynctest@example.com",
+            "password": "Pass123",
+            "confirm_password": "Pass123",
+            "student_code": "",
+        },
+        follow_redirects=True,
+    )
+    assert resp.status_code == 200
+
+    with client.application.app_context():
+        before = Student.query.filter_by(full_name="Profile Sync Test").first()
+        assert before.attendance == 0
+        assert before.current_grade is None
+
+    login(client, "profilesynctest", "Pass123")
+    client.post(
+        "/student/new-prediction",
+        data={"attendance": "88", "study_hours": "14", "previous_grade": "76", "extracurricular": "2", "gender": "Female", "parental_support": "High"},
+    )
+
+    with client.application.app_context():
+        after = Student.query.filter_by(full_name="Profile Sync Test").first()
+        assert after.attendance == 88
+        assert after.study_hours == 14
+        assert after.previous_grade == 76
+        assert after.current_grade is not None
+
+    client.get("/logout")
+    login(client, "admin", "Admin@123")
+    resp = client.get("/admin/students")
+    text = resp.data.decode()
+    assert "88.0" in text
+    assert "14.0" in text
+
+
+def test_student_code_generation_has_no_collision_after_bulk_delete(client):
+    """Regression test: after clearing most student records (e.g. via the
+    admin bulk-clear-imported action), generating a new student code must
+    never collide with a surviving high-numbered code."""
+    from app.models import Student
+
+    login(client, "admin", "Admin@123")
+    client.post("/admin/students/clear-imported")
+
+    resp = client.post(
+        "/admin/students/create",
+        data={"full_name": "Code Collision Check", "gender": "Male", "attendance": "80", "study_hours": "10", "previous_grade": "70", "extracurricular": "1", "parental_support": "Medium"},
+        follow_redirects=True,
+    )
+    assert resp.status_code == 200
+
+    with client.application.app_context():
+        codes = [s.student_code for s in Student.query.all()]
+        assert len(codes) == len(set(codes)), "student codes must never collide, even after bulk deletion"
 
 
 def test_admin_can_update_settings(client):

@@ -33,54 +33,26 @@ def dashboard():
         flash("Your account is not yet linked to a student record. Contact your admin.", "warning")
         return render_template("student/dashboard.html", profile=None, prediction=None, history=[], history_data=[], recommendations=[], weak_areas=[], total_predictions=0, avg_predicted_grade=None, highest_predicted_grade=None)
 
-    # --- Real-time prediction flow ---
-    # Browse Predicted Grade -> retrieve student records -> preprocess ->
-    # run through the Prediction Model -> generate grade -> store (only if
-    # it's new information) -> display Predicted Grade / Confidence /
-    # Risk Level / Suggestions for Improvement.
-    prediction = None
+    # Only show a prediction if the student has actually made one (via the
+    # New Prediction page) or an admin has run one for them -- the dashboard
+    # never silently generates a prediction on its own. A brand-new student
+    # who hasn't submitted anything yet should see an empty state, not a
+    # fabricated-looking result.
+    prediction = profile.latest_prediction()
     recommendations, weak_areas = [], []
-    if ml_service.is_ready():
-        try:
-            live = ml_service.predict_full(profile.to_feature_dict())
-            recommendations = live["recommendations"]
-            weak_areas = live["weak_areas"]
-
-            last_stored = profile.latest_prediction()
-            is_new_result = (
-                last_stored is None
-                or last_stored.predicted_grade != live["predicted_grade"]
-                or last_stored.pass_fail != live["pass_fail"]
-            )
-            if is_new_result:
-                feature_snapshot = profile.to_feature_dict()
-                stored = Prediction(
-                    student_id=profile.id,
-                    created_by_id=current_user.id,
-                    attendance=feature_snapshot["attendance"],
-                    study_hours=feature_snapshot["study_hours"],
-                    previous_grade=feature_snapshot["previous_grade"],
-                    extracurricular=feature_snapshot["extracurricular"],
-                    gender=feature_snapshot["gender"],
-                    parental_support=feature_snapshot["parental_support"],
-                    online_classes=bool(feature_snapshot["online_classes"]),
-                    predicted_grade=live["predicted_grade"],
-                    pass_fail=live["pass_fail"],
-                    pass_probability=live["pass_probability"],
-                    confidence=live["confidence"],
-                    performance_level=live["performance_level"],
-                    regression_model_name=live["regression_model_name"],
-                    classifier_model_name=live["classifier_model_name"],
-                )
-                db.session.add(stored)
-                profile.current_grade = live["predicted_grade"]
-                db.session.commit()
-                prediction = stored
-            else:
-                prediction = last_stored
-            prediction.risk_level = live["risk_level"]
-        except RuntimeError:
-            prediction = profile.latest_prediction()
+    if prediction:
+        raw_snapshot = {
+            "attendance": prediction.attendance,
+            "study_hours": prediction.study_hours,
+            "previous_grade": prediction.previous_grade,
+            "extracurricular": prediction.extracurricular,
+            "gender": prediction.gender,
+            "parental_support": prediction.parental_support,
+            "online_classes": prediction.online_classes,
+        }
+        recommendations = ml_service.recommendations_for(raw_snapshot, prediction.predicted_grade, prediction.pass_fail)
+        weak_areas = ml_service.weak_areas_for(raw_snapshot)
+        prediction.risk_level = ml_service.risk_level_for(prediction.pass_fail, prediction.pass_probability)
 
     history = profile.predictions.limit(10).all()
     history_data = [h.to_dict() for h in history]
@@ -135,6 +107,19 @@ def new_prediction():
             return render_template("student/new_prediction.html", profile=profile, result=None)
 
         if profile:
+            # Keep the student's actual profile in sync with what they just told
+            # the system about themselves -- otherwise admin's Manage Students
+            # page would keep showing stale/blank data even after the student
+            # has clearly reported real numbers via a prediction.
+            profile.attendance = raw["attendance"]
+            profile.study_hours = raw["study_hours"]
+            profile.previous_grade = raw["previous_grade"]
+            profile.extracurricular = raw["extracurricular"]
+            profile.gender = raw["gender"]
+            profile.parental_support = raw["parental_support"]
+            profile.online_classes = raw["online_classes"]
+            profile.current_grade = result["predicted_grade"]
+
             stored = Prediction(
                 student_id=profile.id,
                 created_by_id=current_user.id,

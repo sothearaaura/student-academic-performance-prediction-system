@@ -144,3 +144,19 @@ def predict_full(raw: dict) -> dict:
         "classifier_model_name": getattr(_clf_pipeline, "model_name", ""),
     }
     return result
+
+
+# Public wrappers: these are pure threshold/lookup logic, no model inference
+# needed, so callers can use them to recompute display data (recommendations,
+# weak areas, risk level) from an already-STORED prediction's saved inputs,
+# without re-running the model or requiring it to be loaded.
+def recommendations_for(raw: dict, predicted_grade: float, pass_fail: str) -> list:
+    return _recommendations(raw, predicted_grade, pass_fail)
+
+
+def weak_areas_for(raw: dict) -> list:
+    return _weak_areas(raw)
+
+
+def risk_level_for(pass_fail: str, pass_probability: float) -> str:
+    return _risk_level(pass_fail, pass_probability)
