@@ -38,6 +38,43 @@ project/
 
 ## 2. Setup
 
+## 1.5. IMPORTANT: Data persistence on Render
+
+**By default this app uses SQLite** (`database/app.db`), which is a plain
+file on local disk. On Render's free tier, that disk is **ephemeral** — it
+gets wiped every time the service restarts, which happens automatically on
+every sleep/wake cycle (after ~15 min idle) and on every redeploy. This
+means real users, their predictions, and any data an admin manages gets
+silently lost, not just on redeploy but during totally normal usage.
+
+**The fix**: point the app at a real, external, persistent Postgres
+database instead. The code already supports this — just set a `DATABASE_URL`
+environment variable and it switches automatically, no code changes needed.
+
+Recommended: **[Neon](https://neon.tech)** — genuinely free forever (not a
+trial), no credit card, no time-based expiration, and it auto-wakes on
+connection (unlike some alternatives that need manual reactivation after a
+period of inactivity).
+
+**Steps:**
+1. Sign up at neon.tech, create a project (any name, e.g. `edupredict`).
+2. Copy the connection string it gives you (looks like
+   `postgresql://user:password@ep-xxxx.neon.tech/neondb?sslmode=require`).
+3. On Render: your service → **Environment** → add a variable named
+   `DATABASE_URL` with that connection string as the value.
+4. Redeploy (or just wait for the next auto-restart). On first boot, the app
+   automatically creates all tables in the new database (`db.create_all()`
+   runs on every startup) and seeds the admin + demo student account.
+
+After this, data persists across restarts because it no longer lives on
+Render's local disk at all — it lives on Neon's servers.
+
+Without this step, the app still works fine for demos, but expect any real
+signups/predictions to disappear whenever the free-tier service sleeps and
+wakes back up.
+
+## 2. Setup
+
 ```bash
 cd backend
 python3 -m venv venv && source venv/bin/activate     # optional but recommended

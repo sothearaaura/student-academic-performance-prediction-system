@@ -4,6 +4,7 @@ Flask-Login==0.6.3
 Flask-Bcrypt==1.0.1
 SQLAlchemy==2.0.35
 Werkzeug==3.0.4
+psycopg2-binary==2.9.9
 
 scikit-learn==1.5.2
 pandas==2.2.3
