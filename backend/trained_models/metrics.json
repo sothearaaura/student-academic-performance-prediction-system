@@ -2,128 +2,156 @@
   "pass_threshold": 70.0,
   "rows_original": 950,
   "rows_after_cleaning": 950,
-  "best_regression_model": "Linear Regression",
-  "best_classifier_model": "XGBoost",
+  "best_regression_model": "XGBoost (Monotonic)",
+  "best_classifier_model": "XGBoost (Monotonic)",
   "regression_results": [
     {
-      "Model": "Linear Regression",
-      "Train R2": 0.0091,
-      "Test R2": -0.0008,
-      "Test RMSE": 9.7125,
-      "Test MAE": 8.2807,
-      "Overfit Gap": 0.0099
+      "Model": "Lasso (a=0.1)",
+      "Train R2": 0.8558,
+      "Test R2": 0.8338,
+      "Test RMSE": 5.0985,
+      "Test MAE": 4.1507,
+      "Overfit Gap": 0.0219
     },
     {
-      "Model": "Lasso (a=0.1)",
-      "Train R2": 0.0074,
-      "Test R2": -0.0012,
-      "Test RMSE": 9.7143,
-      "Test MAE": 8.2711,
-      "Overfit Gap": 0.0086
+      "Model": "Linear Regression",
+      "Train R2": 0.8567,
+      "Test R2": 0.8332,
+      "Test RMSE": 5.1084,
+      "Test MAE": 4.148,
+      "Overfit Gap": 0.0235
     },
     {
       "Model": "Ridge (a=1)",
-      "Train R2": 0.009,
-      "Test R2": -0.0014,
-      "Test RMSE": 9.7151,
-      "Test MAE": 8.282,
-      "Overfit Gap": 0.0104
+      "Train R2": 0.8566,
+      "Test R2": 0.833,
+      "Test RMSE": 5.1119,
+      "Test MAE": 4.1537,
+      "Overfit Gap": 0.0237
     },
     {
-      "Model": "Random Forest",
-      "Train R2": 0.1035,
-      "Test R2": -0.0299,
-      "Test RMSE": 9.8524,
-      "Test MAE": 8.4263,
-      "Overfit Gap": 0.1334
+      "Model": "XGBoost (Monotonic)",
+      "Train R2": 0.9022,
+      "Test R2": 0.8247,
+      "Test RMSE": 5.2371,
+      "Test MAE": 4.2566,
+      "Overfit Gap": 0.0775
     },
     {
       "Model": "Gradient Boosting",
-      "Train R2": 0.3254,
-      "Test R2": -0.1557,
-      "Test RMSE": 10.4368,
-      "Test MAE": 8.9308,
-      "Overfit Gap": 0.481
-    },
-    {
-      "Model": "Decision Tree",
-      "Train R2": 0.0717,
-      "Test R2": -0.1603,
-      "Test RMSE": 10.4575,
-      "Test MAE": 8.8976,
-      "Overfit Gap": 0.2319
+      "Train R2": 0.9216,
+      "Test R2": 0.8197,
+      "Test RMSE": 5.3107,
+      "Test MAE": 4.3061,
+      "Overfit Gap": 0.1019
     },
     {
       "Model": "XGBoost",
-      "Train R2": 0.3769,
-      "Test R2": -0.195,
-      "Test RMSE": 10.6131,
-      "Test MAE": 9.1188,
-      "Overfit Gap": 0.5719
+      "Train R2": 0.9315,
+      "Test R2": 0.8185,
+      "Test RMSE": 5.3289,
+      "Test MAE": 4.3209,
+      "Overfit Gap": 0.1131
+    },
+    {
+      "Model": "Random Forest",
+      "Train R2": 0.8016,
+      "Test R2": 0.7328,
+      "Test RMSE": 6.465,
+      "Test MAE": 5.2888,
+      "Overfit Gap": 0.0688
+    },
+    {
+      "Model": "Decision Tree",
+      "Train R2": 0.8012,
+      "Test R2": 0.7134,
+      "Test RMSE": 6.696,
+      "Test MAE": 5.5059,
+      "Overfit Gap": 0.0878
     }
   ],
   "classification_results": [
     {
       "Model": "XGBoost",
-      "Accuracy": 0.7684,
-      "Precision": 0.7944,
-      "Recall": 0.9533,
-      "F1 Score": 0.8667,
-      "AUC": 0.572
+      "Accuracy": 0.8632,
+      "Precision": 0.8806,
+      "Recall": 0.9219,
+      "F1 Score": 0.9008,
+      "AUC": 0.9252
     },
     {
       "Model": "Gradient Boosting",
-      "Accuracy": 0.7579,
-      "Precision": 0.7955,
-      "Recall": 0.9333,
-      "F1 Score": 0.8589,
-      "AUC": 0.5643
-    },
-    {
-      "Model": "Decision Tree",
-      "Accuracy": 0.7526,
-      "Precision": 0.8047,
-      "Recall": 0.9067,
-      "F1 Score": 0.8527,
-      "AUC": 0.5247
-    },
-    {
-      "Model": "Random Forest",
-      "Accuracy": 0.6947,
-      "Precision": 0.7911,
-      "Recall": 0.8333,
-      "F1 Score": 0.8117,
-      "AUC": 0.5518
+      "Accuracy": 0.8579,
+      "Precision": 0.8741,
+      "Recall": 0.9219,
+      "F1 Score": 0.8973,
+      "AUC": 0.927
     },
     {
       "Model": "Logistic Regression",
-      "Accuracy": 0.4947,
-      "Precision": 0.77,
-      "Recall": 0.5133,
-      "F1 Score": 0.616,
-      "AUC": 0.4627
+      "Accuracy": 0.8526,
+      "Precision": 0.8788,
+      "Recall": 0.9062,
+      "F1 Score": 0.8923,
+      "AUC": 0.9376
+    },
+    {
+      "Model": "XGBoost (Monotonic)",
+      "Accuracy": 0.8474,
+      "Precision": 0.8722,
+      "Recall": 0.9062,
+      "F1 Score": 0.8889,
+      "AUC": 0.9293
+    },
+    {
+      "Model": "Random Forest",
+      "Accuracy": 0.8421,
+      "Precision": 0.8712,
+      "Recall": 0.8984,
+      "F1 Score": 0.8846,
+      "AUC": 0.9204
+    },
+    {
+      "Model": "Decision Tree",
+      "Accuracy": 0.8316,
+      "Precision": 0.875,
+      "Recall": 0.875,
+      "F1 Score": 0.875,
+      "AUC": 0.866
     }
   ],
   "feature_importance_regression": {
-    "Attendance_Final": 0.9362818589918489,
-    "StudyHours_Final": 2.316760125067791,
-    "PreviousGrade": 0.12058578625983495,
-    "ExtracurricularActivities": 0.38073333144562527,
-    "Gender": 0.43212192233649943,
-    "ParentalSupport": 0.2904114828747141,
-    "Online_Classes": 0.12174163903546457,
-    "Attendance_Study_Interaction": 2.9035444954211864,
-    "Grade_Study_Ratio": 0.10776742043141437
+    "Attendance_Final": 0.030337538570165634,
+    "StudyHours_Final": 0.06623100489377975,
+    "PreviousGrade": 0.3061847984790802,
+    "ExtracurricularActivities": 0.007224236149340868,
+    "Gender": 0.007034890353679657,
+    "ParentalSupport": 0.15622983872890472,
+    "Online_Classes": 0.0067747109569609165,
+    "Attendance_Study_Interaction": 0.41998291015625
   },
   "feature_importance_classification": {
-    "Attendance_Final": 0.1373768299818039,
-    "StudyHours_Final": 0.08755046129226685,
-    "PreviousGrade": 0.1260702908039093,
-    "ExtracurricularActivities": 0.19537125527858734,
-    "Gender": 0.06573145091533661,
-    "ParentalSupport": 0.19733059406280518,
-    "Online_Classes": 0.04957599565386772,
-    "Attendance_Study_Interaction": 0.06828076392412186,
-    "Grade_Study_Ratio": 0.07271227240562439
+    "Attendance_Final": 0.053026340901851654,
+    "StudyHours_Final": 0.12423668801784515,
+    "PreviousGrade": 0.23920133709907532,
+    "ExtracurricularActivities": 0.047133978456258774,
+    "Gender": 0.02854953706264496,
+    "ParentalSupport": 0.1755094677209854,
+    "Online_Classes": 0.029784567654132843,
+    "Attendance_Study_Interaction": 0.3025580942630768
+  },
+  "deployed_regression_monotonic": true,
+  "deployed_classification_monotonic": true,
+  "deployed_regression_test_r2": 0.8247,
+  "deployed_classification_f1": 0.8889,
+  "deployed_regression_cv_r2_mean": 0.8404,
+  "deployed_regression_cv_r2_std": 0.0361,
+  "deployed_classification_cv_f1_mean": 0.9274,
+  "deployed_classification_cv_f1_std": 0.0119,
+  "deployed_classification_confusion_matrix": {
+    "true_negative_fail_correctly_predicted_fail": 45,
+    "false_positive_fail_predicted_as_pass": 17,
+    "false_negative_pass_predicted_as_fail": 12,
+    "true_positive_pass_correctly_predicted_pass": 116
   }
 }

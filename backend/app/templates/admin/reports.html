@@ -5,6 +5,7 @@
 
 <div class="d-flex gap-2 mb-3">
   <form action="{{ url_for('admin.generate_report') }}" method="POST">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button type="submit" class="btn btn-brand"><i class="bi bi-file-earmark-plus"></i> Generate System Report</button>
   </form>
   <a href="{{ url_for('admin.all_students_report') }}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-pdf"></i> Download All-Students Report</a>

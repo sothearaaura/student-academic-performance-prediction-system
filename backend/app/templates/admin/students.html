@@ -26,6 +26,7 @@
   </div>
   <form action="{{ url_for('admin.clear_imported_students') }}" method="POST"
         onsubmit="return confirm('Delete all {{ imported_count }} imported dataset students? Any that a real student has linked to their account via signup will be kept. This cannot be undone.');">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i> Clear Imported Students</button>
   </form>
 </div>
@@ -50,6 +51,7 @@
           <a href="{{ url_for('admin.edit_student', student_id=s.id) }}" class="btn btn-sm btn-outline-secondary" title="Edit"><i class="bi bi-pencil"></i></a>
           <a href="{{ url_for('admin.student_report', student_id=s.id) }}" class="btn btn-sm btn-outline-secondary" title="PDF Report"><i class="bi bi-file-earmark-pdf"></i></a>
           <form action="{{ url_for('admin.delete_student', student_id=s.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this student and all related predictions?');">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
           </form>
         </td>

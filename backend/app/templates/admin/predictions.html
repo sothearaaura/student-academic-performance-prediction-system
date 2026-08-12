@@ -15,10 +15,26 @@
   {% if q or level_filter %}<a href="{{ url_for('admin.predictions') }}" class="btn btn-outline-secondary">Clear</a>{% endif %}
 </form>
 
+{% if stale_count > 0 %}
+<div class="alert alert-warning d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <div>
+    <i class="bi bi-exclamation-triangle"></i>
+    <b>{{ stale_count }}</b> prediction(s) have a Result that doesn't match their Predicted Grade
+    (stored before Result was tied directly to grade). Level is unaffected for records not
+    in this count.
+  </div>
+  <form action="{{ url_for('admin.recalculate_results') }}" method="POST"
+        onsubmit="return confirm('Recalculate Result and Level for {{ stale_count }} prediction(s) based on their Predicted Grade? This only touches records where they currently disagree.');">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-sm btn-warning"><i class="bi bi-arrow-repeat"></i> Fix Inconsistent Results</button>
+  </form>
+</div>
+{% endif %}
+
 <div class="card p-3">
   <div class="table-responsive">
 <table class="table table-clean align-middle">
-    <thead><tr><th>#</th><th>Student</th><th>Predicted Grade</th><th>Result</th><th>Probability</th><th>Confidence</th><th>Level</th><th>Made By</th><th>Date</th><th></th></tr></thead>
+    <thead><tr><th>#</th><th>Student</th><th>Predicted Grade</th><th>Result</th><th>Probability</th><th>Classifier Confidence</th><th>Level</th><th>Made By</th><th>Date</th><th></th></tr></thead>
     <tbody>
     {% for p in predictions %}
       <tr>
@@ -33,6 +49,7 @@
         <td class="text-muted"><time class="local-time" data-utc="{{ p.created_at|isoutc }}" data-fmt="datetime">{{ p.created_at.strftime('%b %d, %H:%M') }} UTC</time></td>
         <td class="text-end">
           <form action="{{ url_for('admin.delete_prediction', prediction_id=p.id) }}" method="POST" onsubmit="return confirm('Delete this prediction?');">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
           </form>
         </td>

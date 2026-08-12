@@ -32,6 +32,7 @@
         exist (matching student code) are skipped, so it never creates duplicates.
       </div>
       <form action="{{ url_for('admin.import_demo_students') }}" method="POST">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn btn-outline-secondary"><i class="bi bi-people"></i> Import Dataset as Demo Students</button>
       </form>
     </div>
@@ -43,6 +44,7 @@
     <div class="card p-4 h-100">
       <div class="fw-semibold mb-3">Replace Dataset</div>
       <form action="{{ url_for('admin.upload_dataset') }}" method="POST" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="mb-3">
           <label class="form-label">New dataset file (.xlsx)</label>
           <input type="file" name="dataset_file" class="form-control" accept=".xlsx,.xls" required>

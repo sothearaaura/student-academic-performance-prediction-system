@@ -90,7 +90,7 @@ def generate_student_report(student, prediction, output_path: str, generated_by:
                     ["Predicted Final Grade", f"{prediction.predicted_grade:.2f}"],
                     ["Result", prediction.pass_fail],
                     ["Pass Probability", f"{prediction.pass_probability:.1f}%"],
-                    ["Confidence Score", f"{prediction.confidence:.1f}%"],
+                    ["Classifier Confidence", f"{prediction.confidence:.1f}%"],
                     ["Performance Level", prediction.performance_level],
                     ["Prediction Date", prediction.created_at.strftime("%Y-%m-%d %H:%M")],
                 ]

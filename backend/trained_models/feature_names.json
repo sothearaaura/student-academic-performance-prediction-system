@@ -20,5 +20,19 @@
     "High": 2
   },
   "gender_mode": "Male",
-  "support_mode": "High"
+  "support_mode": "High",
+  "training_ranges": {
+    "attendance": [
+      26.1,
+      100.0
+    ],
+    "study_hours": [
+      0.0,
+      38.9
+    ],
+    "previous_grade": [
+      20.7,
+      100.0
+    ]
+  }
 }

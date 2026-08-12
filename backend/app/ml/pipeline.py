@@ -120,15 +120,25 @@ class StudentPerformancePipeline:
         X_scaled = self.transform(raw)
         if self.task == "regression":
             value = float(self.model.predict(X_scaled)[0])
+            # A final grade is bounded [0, 100] by definition -- the model
+            # was trained on data clipped to that range but was never given
+            # an explicit output constraint, so it can (and did) extrapolate
+            # slightly past 100 for very high inputs.
+            value = max(0.0, min(100.0, value))
             return {"predicted_grade": round(value, 2)}
 
         pred_class = int(self.model.predict(X_scaled)[0])
-        proba = self.model.predict_proba(X_scaled)[0]
-        pass_probability = float(proba[1])
+        proba = np.asarray(self.model.predict_proba(X_scaled)[0], dtype=float)
+        classes = np.asarray(getattr(self.model, "classes_", [0, 1]))
+        probabilities = {int(label): float(probability) for label, probability in zip(classes, proba)}
+        pass_probability = probabilities.get(1, 0.0)
+        winning_probability = probabilities.get(pred_class, float(proba.max()))
         return {
             "pass_fail": "Pass" if pred_class == 1 else "Fail",
             "pass_probability": round(pass_probability * 100, 2),
-            "confidence": round(max(proba) * 100, 2),
+            "confidence": round(winning_probability * 100, 2),
+            "classifier_class": pred_class,
+            "classifier_classes": [int(label) for label in classes],
         }
 
     def feature_importance(self) -> dict:

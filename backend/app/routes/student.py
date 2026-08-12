@@ -5,6 +5,7 @@ from flask import Blueprint, current_app, flash, redirect, render_template, requ
 from flask_login import current_user, login_required
 
 from app.extensions import db
+from app.utils import parse_academic_inputs
 from app.models import ROLE_STUDENT, ActivityLog, AppSetting, Prediction, Report
 from app.services import ml_service, report_service
 from app.utils import roles_required
@@ -77,6 +78,7 @@ def dashboard():
         avg_predicted_grade=avg_predicted_grade,
         highest_predicted_grade=highest_predicted_grade,
         now_hour=datetime.utcnow().hour,
+        metrics=ml_service.get_metrics(),
     )
 
 
@@ -91,15 +93,18 @@ def new_prediction():
     raw = None
 
     if request.method == "POST":
-        raw = {
-            "attendance": float(request.form.get("attendance", 0) or 0),
-            "study_hours": float(request.form.get("study_hours", 0) or 0),
-            "previous_grade": float(request.form.get("previous_grade", 0) or 0),
-            "extracurricular": float(request.form.get("extracurricular", 0) or 0),
-            "gender": request.form.get("gender", "Male"),
-            "parental_support": request.form.get("parental_support", "Medium"),
-            "online_classes": bool(request.form.get("online_classes")),
-        }
+        raw, validation_errors = parse_academic_inputs(request.form, {
+            "attendance": profile.attendance if profile else 85,
+            "study_hours": profile.study_hours if profile else 15,
+            "previous_grade": profile.previous_grade if profile else 75,
+            "extracurricular": profile.extracurricular if profile else 1,
+            "gender": profile.gender if profile else "Male",
+            "parental_support": profile.parental_support if profile else "Medium",
+        })
+        if validation_errors:
+            for error in validation_errors:
+                flash(error, "danger")
+            return render_template("student/new_prediction.html", profile=profile, result=None, raw=raw, metrics=ml_service.get_metrics())
         try:
             result = ml_service.predict_full(raw)
         except RuntimeError as exc:
@@ -107,19 +112,10 @@ def new_prediction():
             return render_template("student/new_prediction.html", profile=profile, result=None)
 
         if profile:
-            # Keep the student's actual profile in sync with what they just told
-            # the system about themselves -- otherwise admin's Manage Students
-            # page would keep showing stale/blank data even after the student
-            # has clearly reported real numbers via a prediction.
-            profile.attendance = raw["attendance"]
-            profile.study_hours = raw["study_hours"]
-            profile.previous_grade = raw["previous_grade"]
-            profile.extracurricular = raw["extracurricular"]
-            profile.gender = raw["gender"]
-            profile.parental_support = raw["parental_support"]
-            profile.online_classes = raw["online_classes"]
-            profile.current_grade = result["predicted_grade"]
-
+            # This page is explicitly a WHAT-IF predictor.  A hypothetical
+            # scenario must never overwrite the student's authoritative
+            # profile fields; only the prediction history receives the
+            # submitted snapshot.
             stored = Prediction(
                 student_id=profile.id,
                 created_by_id=current_user.id,
@@ -142,7 +138,10 @@ def new_prediction():
             db.session.commit()
             ActivityLog.log(current_user.id, "predict", "Student ran a self-service what-if prediction")
 
-    return render_template("student/new_prediction.html", profile=profile, result=result, raw=raw if result else None)
+    return render_template(
+        "student/new_prediction.html", profile=profile, result=result, raw=raw if result else None,
+        metrics=ml_service.get_metrics(),
+    )
 
 
 @student_bp.route("/history")
@@ -156,12 +155,14 @@ def history():
 def about():
     metrics = ml_service.get_metrics()
     feature_names = ml_service.get_feature_names()
-    settings = AppSetting.get()
+    # The deployed model is the source of truth for prediction behavior.
+    # AppSetting may contain a value intended for the *next* retraining only.
+    deployed_threshold = float(metrics.get("pass_threshold", 70.0))
     return render_template(
         "student/about.html",
         feature_count=len(feature_names.get("feature_columns", [])) or 9,
         best_classifier=metrics.get("best_classifier_model", "AI Model"),
-        pass_threshold=settings.pass_threshold,
+        pass_threshold=deployed_threshold,
     )
 
 

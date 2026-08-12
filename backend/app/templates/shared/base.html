@@ -16,7 +16,7 @@
   {% if current_user.is_authenticated %}
   <aside class="sidebar" id="sidebar">
     <div class="brand">
-      <img src="{{ url_for('static', filename='img/logo.png') }}" alt="EduPredict" style="height:28px; width:auto; object-fit:contain;">
+      <img src="{{ url_for('static', filename='img/logo.png') }}" alt="EduPredict" style="height:36px; width:auto; object-fit:contain;">
       <span>EduPredict</span>
       <span class="badge-role">{{ current_user.role }}</span>
     </div>

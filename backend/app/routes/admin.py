@@ -30,7 +30,7 @@ from app.models import (
     User,
 )
 from app.services import ml_service, report_service
-from app.utils import generate_student_code, roles_required
+from app.utils import generate_student_code, parse_academic_inputs, roles_required
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -157,6 +157,12 @@ def create_user():
         email = request.form.get("email", "").strip()
         role = request.form.get("role", ROLE_STUDENT)
         password = request.form.get("password", "")
+        if role not in (ROLE_ADMIN, ROLE_STUDENT):
+            flash("Invalid account role.", "danger")
+            return redirect(url_for("admin.create_user"))
+        if password and len(password) < 6:
+            flash("Password must be at least 6 characters.", "danger")
+            return redirect(url_for("admin.create_user"))
 
         if User.query.filter((User.username == username) | (User.email == email)).first():
             flash("A user with that username or email already exists.", "danger")
@@ -274,17 +280,26 @@ def create_student():
             next_id += 1
             code = generate_student_code(next_id)
 
+        raw, validation_errors = parse_academic_inputs(request.form)
+        full_name = request.form.get("full_name", "").strip()
+        if not full_name:
+            validation_errors.append("Full name is required.")
+        if validation_errors:
+            for error in validation_errors:
+                flash(error, "danger")
+            return render_template("admin/student_form.html", student=None)
+
         student = Student(
             student_code=code,
-            full_name=request.form.get("full_name", "").strip(),
-            gender=request.form.get("gender", "Male"),
+            full_name=full_name,
+            gender=raw["gender"],
             email=request.form.get("email", "").strip() or None,
-            attendance=float(request.form.get("attendance", 0) or 0),
-            study_hours=float(request.form.get("study_hours", 0) or 0),
-            previous_grade=float(request.form.get("previous_grade", 0) or 0),
-            extracurricular=float(request.form.get("extracurricular", 0) or 0),
-            parental_support=request.form.get("parental_support", "Medium"),
-            online_classes=bool(request.form.get("online_classes")),
+            attendance=raw["attendance"],
+            study_hours=raw["study_hours"],
+            previous_grade=raw["previous_grade"],
+            extracurricular=raw["extracurricular"],
+            parental_support=raw["parental_support"],
+            online_classes=raw["online_classes"],
             created_by_id=current_user.id,
         )
         db.session.add(student)
@@ -311,15 +326,28 @@ def create_student():
 def edit_student(student_id):
     student = Student.query.get_or_404(student_id)
     if request.method == "POST":
-        student.full_name = request.form.get("full_name", student.full_name).strip()
-        student.gender = request.form.get("gender", student.gender)
+        raw, validation_errors = parse_academic_inputs(request.form, {
+            "attendance": student.attendance, "study_hours": student.study_hours,
+            "previous_grade": student.previous_grade, "extracurricular": student.extracurricular,
+            "gender": student.gender, "parental_support": student.parental_support,
+        })
+        full_name = request.form.get("full_name", student.full_name).strip()
+        if not full_name:
+            validation_errors.append("Full name is required.")
+        if validation_errors:
+            for error in validation_errors:
+                flash(error, "danger")
+            return render_template("admin/student_form.html", student=student)
+
+        student.full_name = full_name
+        student.gender = raw["gender"]
         student.email = request.form.get("email", "").strip() or None
-        student.attendance = float(request.form.get("attendance", student.attendance) or 0)
-        student.study_hours = float(request.form.get("study_hours", student.study_hours) or 0)
-        student.previous_grade = float(request.form.get("previous_grade", student.previous_grade) or 0)
-        student.extracurricular = float(request.form.get("extracurricular", student.extracurricular) or 0)
-        student.parental_support = request.form.get("parental_support", student.parental_support)
-        student.online_classes = bool(request.form.get("online_classes"))
+        student.attendance = raw["attendance"]
+        student.study_hours = raw["study_hours"]
+        student.previous_grade = raw["previous_grade"]
+        student.extracurricular = raw["extracurricular"]
+        student.parental_support = raw["parental_support"]
+        student.online_classes = raw["online_classes"]
 
         login_error = _maybe_create_login(student, request.form)
 
@@ -359,8 +387,12 @@ def clear_imported_students():
     Any of those that a real student has since claimed via signup (i.e.
     has a linked user account) are deliberately left alone, so this can't
     accidentally delete someone's real, in-use account."""
+    # Dataset imports use the exact generated name pattern "Student NNN".
+    # Do not delete arbitrary admin-created STUxxxxx records that merely lack
+    # a linked login. Linked records are still protected as an extra guard.
     imported = Student.query.filter(
         Student.student_code.like("STU%"),
+        Student.full_name.like("Student %"),
         Student.user_id.is_(None),
     ).all()
     count = len(imported)
@@ -402,15 +434,14 @@ def predict():
     selected_student_id = request.values.get("student_id", type=int)
 
     if request.method == "POST":
-        raw = {
-            "attendance": float(request.form.get("attendance", 0) or 0),
-            "study_hours": float(request.form.get("study_hours", 0) or 0),
-            "previous_grade": float(request.form.get("previous_grade", 0) or 0),
-            "extracurricular": float(request.form.get("extracurricular", 0) or 0),
-            "gender": request.form.get("gender", "Male"),
-            "parental_support": request.form.get("parental_support", "Medium"),
-            "online_classes": bool(request.form.get("online_classes")),
-        }
+        raw, validation_errors = parse_academic_inputs(request.form)
+        if validation_errors:
+            for error in validation_errors:
+                flash(error, "danger")
+            return render_template(
+                "admin/predict.html", students=all_students, result=None,
+                selected_student_id=selected_student_id, raw=raw, metrics=ml_service.get_metrics()
+            )
         try:
             result = ml_service.predict_full(raw)
         except RuntimeError as exc:
@@ -449,7 +480,7 @@ def predict():
 
     return render_template(
         "admin/predict.html", students=all_students, result=result, raw=raw if result else None,
-        selected_student_id=selected_student_id
+        selected_student_id=selected_student_id, metrics=ml_service.get_metrics(),
     )
 
 
@@ -469,7 +500,42 @@ def predictions():
         query = query.filter(Prediction.performance_level == level_filter)
 
     all_predictions = query.order_by(Prediction.created_at.desc()).limit(200).all()
-    return render_template("admin/predictions.html", predictions=all_predictions, q=q, level_filter=level_filter)
+
+    pass_threshold = ml_service.current_pass_threshold()
+    stale_count = Prediction.query.filter(
+        db.or_(
+            db.and_(Prediction.predicted_grade >= pass_threshold, Prediction.pass_fail == "Fail"),
+            db.and_(Prediction.predicted_grade < pass_threshold, Prediction.pass_fail == "Pass"),
+        )
+    ).count()
+
+    return render_template(
+        "admin/predictions.html", predictions=all_predictions, q=q, level_filter=level_filter,
+        stale_count=stale_count,
+    )
+
+
+@admin_bp.route("/predictions/recalculate-results", methods=["POST"])
+def recalculate_results():
+    """One-time fix for predictions stored BEFORE Result was tied to
+    Predicted Grade -- a code fix alone doesn't touch already-saved rows,
+    so this recomputes pass_fail/performance_level/risk_level for every
+    existing Prediction using the current (correct) grade-based logic."""
+    pass_threshold = ml_service.current_pass_threshold()
+
+    all_preds = Prediction.query.all()
+    updated = 0
+    for p in all_preds:
+        correct_pass_fail = "Pass" if p.predicted_grade >= pass_threshold else "Fail"
+        new_level = ml_service.performance_level_for(p.predicted_grade, correct_pass_fail)
+        if p.pass_fail != correct_pass_fail or p.performance_level != new_level:
+            p.pass_fail = correct_pass_fail
+            p.performance_level = new_level
+            updated += 1
+    db.session.commit()
+    ActivityLog.log(current_user.id, "recalculate_results", f"Recalculated {updated} stale prediction result(s)")
+    flash(f"Recalculated {updated} prediction(s) whose Result/Level didn't match their Predicted Grade.", "success")
+    return redirect(url_for("admin.predictions"))
 
 
 @admin_bp.route("/predictions/<int:prediction_id>/delete", methods=["POST"])
@@ -651,6 +717,21 @@ def upload_dataset():
         df_check = pd.read_excel(upload_tmp_path)
         if "FinalGrade" not in df_check.columns:
             raise ValueError("Uploaded file is missing the required 'FinalGrade' column.")
+        # Validate against the same cleaning/feature contract used by
+        # train_model.py, not just the target column. This prevents an upload
+        # that looks valid in the UI from breaking the next retrain.
+        from train_model import clean_data
+        cleaned = clean_data(df_check)
+        required = {"Gender", "ParentalSupport", "PreviousGrade", "ExtracurricularActivities", "FinalGrade"}
+        if not {c for c in required if c in cleaned.columns} == required:
+            missing = sorted(required - set(cleaned.columns))
+            raise ValueError("Uploaded file is missing required columns after cleaning: " + ", ".join(missing))
+        if not ("Attendance_Final" in cleaned.columns or "AttendanceRate" in cleaned.columns or "Attendance (%)" in df_check.columns):
+            raise ValueError("Uploaded file is missing an attendance column.")
+        if not ("StudyHours_Final" in cleaned.columns or "StudyHoursPerWeek" in cleaned.columns or "Study Hours" in df_check.columns):
+            raise ValueError("Uploaded file is missing a study-hours column.")
+        if cleaned.empty:
+            raise ValueError("Uploaded dataset contains no usable rows after cleaning.")
     except Exception as exc:
         os.remove(upload_tmp_path)
         flash(f"Upload rejected: {exc}", "danger")

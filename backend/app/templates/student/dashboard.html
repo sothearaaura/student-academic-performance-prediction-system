@@ -15,6 +15,19 @@
   <a href="{{ url_for('student.new_prediction') }}" class="btn btn-brand"><i class="bi bi-plus-lg"></i> New Prediction</a>
 </div>
 
+{% if prediction and metrics and metrics.deployed_regression_test_r2 is not none and metrics.deployed_regression_test_r2 < 0.3 %}
+<div class="alert alert-warning d-flex align-items-start gap-2 mb-3" style="font-size:0.85rem;">
+  <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+  <div>
+    <b>Treat your predicted grade as a rough estimate, not a precise forecast.</b>
+    This model's accuracy on held-out test data is currently low — the underlying dataset
+    has limited correlation between these inputs and final grade. Your <b>Risk Level</b>
+    and <b>Suggestions for Improvement</b> below are more reliable signals than the
+    specific number.
+  </div>
+</div>
+{% endif %}
+
 <div class="row g-3 mb-3">
   <div class="col-6 col-lg-3">
     <div class="stat-card">
@@ -80,7 +93,7 @@
 <div class="card p-4 mb-3">
   <div class="row text-center">
     <div class="col-6 col-md-3 mb-3 mb-md-0">
-      <div class="text-muted" style="font-size:0.78rem;">Confidence Score</div>
+      <div class="text-muted" style="font-size:0.78rem;">Classifier Confidence</div>
       <div class="fw-bold fs-4">{{ prediction.confidence if prediction else '—' }}{{ '%' if prediction }}</div>
     </div>
     <div class="col-6 col-md-3 mb-3 mb-md-0">

@@ -1,11 +1,18 @@
 import secrets
 from datetime import datetime, timedelta
+import os
+import smtplib
+from email.message import EmailMessage
+from urllib.parse import urlparse
 
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 
 from app.extensions import db
-from app.models import ROLE_ADMIN, ROLE_STUDENT, ActivityLog, AppSetting, LoginHistory, Student, User
+from app.models import (
+    ROLE_ADMIN, ROLE_STUDENT, ActivityLog, AppSetting, LoginHistory,
+    PasswordResetToken, Student, User,
+)
 from app.utils import generate_student_code
 
 auth_bp = Blueprint("auth", __name__)
@@ -172,27 +179,95 @@ def signup():
 
 @auth_bp.route("/forgot-password", methods=["GET", "POST"])
 def forgot_password():
-    """Simplified self-service reset: verifies identity via username + email,
-    then lets the user set a new password directly. In a production deployment
-    this would instead email a signed, expiring token."""
+    """Request a one-time, expiring password-reset link.
+
+    The response is intentionally identical whether or not the email exists,
+    preventing account enumeration. In production, SMTP must be configured so
+    the reset link is delivered to the verified email address.
+    """
     if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        email = request.form.get("email", "").strip()
-        new_password = request.form.get("new_password", "")
+        email = request.form.get("email", "").strip().lower()
+        generic = "If an account exists for that email, a password reset link has been sent."
 
-        user = User.query.filter_by(username=username, email=email).first()
-        if not user:
-            flash("No account matches that username and email combination.", "danger")
-            return render_template("auth/forgot_password.html")
+        user = User.query.filter(db.func.lower(User.email) == email).first() if email else None
+        if user and user.is_active_flag:
+            smtp_host = os.environ.get("SMTP_HOST")
+            smtp_port = int(os.environ.get("SMTP_PORT", "587"))
+            smtp_user = os.environ.get("SMTP_USERNAME")
+            smtp_password = os.environ.get("SMTP_PASSWORD")
+            smtp_from = os.environ.get("SMTP_FROM") or smtp_user
+            smtp_tls = os.environ.get("SMTP_TLS", "true").lower() == "true"
 
-        if len(new_password) < 6:
-            flash("New password must be at least 6 characters.", "danger")
-            return render_template("auth/forgot_password.html")
+            if not all([smtp_host, smtp_user, smtp_password, smtp_from]):
+                # Never create a reset token that cannot be delivered in production.
+                if os.environ.get("RENDER") or os.environ.get("FLASK_ENV") == "production":
+                    flash("Password reset is temporarily unavailable. Please contact an administrator.", "warning")
+                    return render_template("auth/forgot_password.html")
+                flash("Password reset email is not configured in this development environment.", "warning")
+                return render_template("auth/forgot_password.html")
 
-        user.set_password(new_password)
-        db.session.commit()
-        ActivityLog.log(user.id, "password_reset", "Password reset via forgot-password form")
-        flash("Password updated successfully. You can now log in.", "success")
+            raw_token, _ = PasswordResetToken.issue(user, minutes=30)
+            db.session.commit()
+
+            reset_url = url_for("auth.reset_password", token=raw_token, _external=True)
+            msg = EmailMessage()
+            msg["Subject"] = "EduPredict password reset"
+            msg["From"] = smtp_from
+            msg["To"] = user.email
+            msg.set_content(
+                f"Hello {user.full_name},\n\n"
+                "We received a request to reset your EduPredict password.\n\n"
+                f"Use this one-time link within 30 minutes:\n{reset_url}\n\n"
+                "If you did not request this, you can safely ignore this email.\n"
+                "The link can only be used once.\n\n"
+                "EduPredict"
+            )
+            try:
+                with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as smtp:
+                    if smtp_tls:
+                        smtp.starttls()
+                    smtp.login(smtp_user, smtp_password)
+                    smtp.send_message(msg)
+                ActivityLog.log(user.id, "password_reset_requested", "One-time password reset link sent")
+            except Exception:
+                db.session.rollback()
+                current_app.logger.exception("Password reset email delivery failed")
+                flash("Password reset is temporarily unavailable. Please try again later.", "warning")
+                return render_template("auth/forgot_password.html")
+
+        flash(generic, "info")
         return redirect(url_for("auth.login"))
 
     return render_template("auth/forgot_password.html")
+
+
+@auth_bp.route("/reset-password/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    """Consume a single-use reset token and set a new password."""
+    reset = PasswordResetToken.query.filter_by(
+        token_hash=PasswordResetToken.hash_token(token), used_at=None
+    ).first()
+
+    if not reset or reset.expires_at <= datetime.utcnow() or not reset.user.is_active_flag:
+        flash("This password reset link is invalid or has expired.", "danger")
+        return redirect(url_for("auth.forgot_password"))
+
+    if request.method == "POST":
+        new_password = request.form.get("new_password", "")
+        confirm_password = request.form.get("confirm_password", "")
+        if len(new_password) < 8:
+            flash("New password must be at least 8 characters.", "danger")
+            return render_template("auth/reset_password.html")
+        if new_password != confirm_password:
+            flash("Passwords do not match.", "danger")
+            return render_template("auth/reset_password.html")
+
+        # Mark the token used in the same transaction as the password change.
+        reset.user.set_password(new_password)
+        reset.used_at = datetime.utcnow()
+        db.session.commit()
+        ActivityLog.log(reset.user.id, "password_reset", "Password reset using one-time token")
+        flash("Your password has been reset. You can now log in.", "success")
+        return redirect(url_for("auth.login"))
+
+    return render_template("auth/reset_password.html")

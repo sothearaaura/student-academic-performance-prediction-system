@@ -33,6 +33,7 @@
             <ul class="dropdown-menu dropdown-menu-end">
               <li>
                 <form action="{{ url_for('admin.reset_password', user_id=u.id) }}" method="POST" class="px-3 py-2">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <label class="form-label small mb-1">Reset password</label>
                   <div class="input-group input-group-sm">
                     <input type="password" name="new_password" class="form-control" placeholder="New password" minlength="6" required>
@@ -43,11 +44,13 @@
               <li><hr class="dropdown-divider"></li>
               <li>
                 <form action="{{ url_for('admin.toggle_active', user_id=u.id) }}" method="POST">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button class="dropdown-item" type="submit">{{ 'Deactivate' if u.is_active_flag else 'Activate' }}</button>
                 </form>
               </li>
               <li>
                 <form action="{{ url_for('admin.delete_user', user_id=u.id) }}" method="POST" onsubmit="return confirm('Delete this user permanently?');">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button class="dropdown-item text-danger" type="submit">Delete</button>
                 </form>
               </li>

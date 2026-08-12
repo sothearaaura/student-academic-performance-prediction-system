@@ -1,9 +1,12 @@
 import os
 
 from flask import Flask
+from flask_wtf import CSRFProtect
 
 from app.extensions import bcrypt, db, login_manager
 from app.services import ml_service
+
+csrf = CSRFProtect()
 
 
 def create_app(config_object="config.Config"):
@@ -19,6 +22,7 @@ def create_app(config_object="config.Config"):
     db.init_app(app)
     login_manager.init_app(app)
     bcrypt.init_app(app)
+    csrf.init_app(app)
 
     from app.models import User
 
@@ -71,5 +75,16 @@ def create_app(config_object="config.Config"):
         from flask import render_template
 
         return render_template("shared/error.html", code=404, message="Page not found."), 404
+
+    from flask_wtf.csrf import CSRFError
+
+    @app.errorhandler(CSRFError)
+    def csrf_error(e):
+        from flask import render_template
+
+        return render_template(
+            "shared/error.html", code=400,
+            message="This form has expired or was submitted incorrectly. Please go back and try again.",
+        ), 400
 
     return app
